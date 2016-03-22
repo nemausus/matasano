@@ -3,6 +3,7 @@
 
 import binascii
 import base64
+import random
 import string
 import sys
 import unittest
@@ -26,11 +27,23 @@ class TestSet2(unittest.TestCase):
         self.assertEqual(expected, Crypto.PadPkcs7(text, 20))
 
     @Logger
-    def testAesCbcMode(self):
+    def testAesDecryptionCbcMode(self):
         cipher = base64.b64decode(open("10.txt").read())
         iv = '\x00'*16
         text = Crypto.DecryptAes(cipher, "YELLOW SUBMARINE", AES.MODE_CBC, iv)
         self.assertEqual(open('plaintext.txt').read(), text)
+
+    @Logger
+    def testAesEcbCbcMode(self):
+        text = open('plaintext.txt').read()
+        for i in range(20):
+            plain = Crypto.GenRandomKey(random.randint(5,10)) + text + \
+                Crypto.GenRandomKey(random.randint(5,10))
+            mode = AES.MODE_ECB if random.randint(0,1) == 0 else AES.MODE_CBC
+            cipher = Crypto.EncryptAes(plain, Crypto.GenRandomKey(16), mode)
+            expected = True if mode == AES.MODE_ECB else False
+            self.assertEqual(expected, Crypto.IsAesEcbCipher(cipher))
+
 
 if __name__ == '__main__':
     unittest.main()

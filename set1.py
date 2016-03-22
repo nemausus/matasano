@@ -41,13 +41,13 @@ class TestSet1(unittest.TestCase):
         self.assertEqual(expected, text)
 
     @Logger
-    def testDetectSingleByteXorCipher(self):
+    def testDetectSingleByteXor(self):
         expected = 'Now that the party is jumping\n'
         ciphers = map(
             lambda line: binascii.unhexlify(line.replace('\n', '')),
             open('4.txt').readlines()
         )
-        self.assertEqual(expected, Crypto.DetectSingleByteXorCipher(ciphers))
+        self.assertEqual(expected, Crypto.DetectSingleByteXor(ciphers))
 
     @Logger
     def testGetRepeatingXor(self):
@@ -69,7 +69,7 @@ class TestSet1(unittest.TestCase):
         self.assertEqual(open('plaintext.txt').read(), text)
 
     @Logger
-    def testAesEcbMode(self):
+    def testAesDecryptionEcbMode(self):
         cipher = base64.b64decode(open("7.txt").read())
         key = 'YELLOW SUBMARINE'
         text = Crypto.DecryptAes(cipher, key, AES.MODE_ECB)

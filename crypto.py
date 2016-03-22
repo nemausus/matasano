@@ -2,6 +2,7 @@
 
 import binascii
 import base64
+import random
 import string
 import sys
 import unittest
@@ -18,6 +19,14 @@ class Crypto(object):
         0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749,  # H-N
         0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758,  # O-U
         0.00978, 0.02360, 0.00150, 0.01974, 0.00074]                    # V-Z ]
+
+    @staticmethod
+    def GenRandomKey(length=16):
+        alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/'
+        return ''.join(map(
+            lambda i: alphabet[random.randint(0,63)],
+            range(length)
+        ))
 
     @staticmethod
     def GetChiSquaredError(text):
@@ -115,7 +124,7 @@ class Crypto(object):
             return Crypto.GetRepeatingXor(cipher, key), key
 
     @staticmethod
-    def DetectSingleByteXorCipher(ciphers):
+    def DetectSingleByteXor(ciphers):
         """Detects single byte xor cipher."""
         for cipher in ciphers:
             text,_ = Crypto.BreakSingleByteXor(cipher)
@@ -154,6 +163,12 @@ class Crypto(object):
         aes = AES.new(key, mode, iv)
         unpad = lambda s : s[:-ord(s[len(s)-1:])]
         return unpad(aes.decrypt(cipher))
+
+    @staticmethod
+    def EncryptAes(text, key, mode, iv=None):
+        iv = iv if iv else Random.new().read(16)
+        aes = AES.new(key, mode, iv)
+        return aes.encrypt(Crypto.PadPkcs7(text))
 
     @staticmethod
     def IsAesEcbCipher(cipher):
