@@ -149,9 +149,8 @@ class Crypto(object):
         return Crypto.GetRepeatingXor(cipher, key), key
 
     @staticmethod
-    def DecryptAes(cipher, key, mode):
-        iv = Random.new().read(16)
-        mode = AES.MODE_ECB if mode == "ecb" else AES.MODE_CFB
+    def DecryptAes(cipher, key, mode, iv=None):
+        iv = iv if iv else Random.new().read(16)
         aes = AES.new(key, mode, iv)
         unpad = lambda s : s[:-ord(s[len(s)-1:])]
         return unpad(aes.decrypt(cipher))
@@ -161,3 +160,10 @@ class Crypto(object):
         num_blocks = len(cipher) / 16
         blocks = map(lambda i: cipher[i*16:i*16+16], range(num_blocks))
         return Counter(blocks).most_common(1)[0][1] > 1
+
+    @staticmethod
+    def PadPkcs7(text, bs=16):
+        pad_size = bs - len(text) % bs
+        pad_char = chr(pad_size)
+        return text + pad_char*pad_size
+

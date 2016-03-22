@@ -64,18 +64,16 @@ class TestSet1(unittest.TestCase):
     def testBreakRepeatingXor(self):
         cipher = base64.b64decode(open("6.txt").read())
         actual = Crypto.GetRepeatingXor(cipher, "Terminator X: Bring the noise")
-        _, key = Crypto.BreakRepeatingXor(cipher)
+        text, key = Crypto.BreakRepeatingXor(cipher)
         self.assertEqual("Terminator X: Bring the noise", key)
+        self.assertEqual(open('plaintext.txt').read(), text)
 
     @Logger
     def testAesEcbMode(self):
         cipher = base64.b64decode(open("7.txt").read())
         key = 'YELLOW SUBMARINE'
-        text = Crypto.DecryptAes(cipher, key, "ecb")
-        expected = Crypto.GetRepeatingXor(
-            base64.b64decode(open("6.txt").read()),
-            "Terminator X: Bring the noise")
-        self.assertEqual(expected, text)
+        text = Crypto.DecryptAes(cipher, key, AES.MODE_ECB)
+        self.assertEqual(open('plaintext.txt').read(), text)
 
     @Logger
     def testDetectAesEcbCipher(self):
