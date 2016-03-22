@@ -37,10 +37,7 @@ class TestSet2(unittest.TestCase):
     def testAesEcbCbcMode(self):
         text = open('plaintext.txt').read()
         for i in range(20):
-            plain = Crypto.GenRandomKey(random.randint(5,10)) + text + \
-                Crypto.GenRandomKey(random.randint(5,10))
-            mode = AES.MODE_ECB if random.randint(0,1) == 0 else AES.MODE_CBC
-            cipher = Crypto.EncryptAes(plain, Crypto.GenRandomKey(16), mode)
+            cipher, mode = Crypto.OracleEncryption(text)
             expected = True if mode == AES.MODE_ECB else False
             self.assertEqual(expected, Crypto.IsAesEcbCipher(cipher))
 

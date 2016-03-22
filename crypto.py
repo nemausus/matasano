@@ -12,7 +12,7 @@ from Crypto import Random
 
 class Crypto(object):
 
-    EN_MOST_FREQUENT = '. etaoinshrd'
+    EN_MOST_FREQUENT = ' etaoin'
     EN_AVG_LEN = 4.56
     EN_FREQUENCY = [
         0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015,  # A-G
@@ -22,6 +22,8 @@ class Crypto(object):
 
     @staticmethod
     def GenRandomKey(length=16):
+        """Returns random key of given length using base64 character set.
+           Default key length is 16."""
         alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+/'
         return ''.join(map(
             lambda i: alphabet[random.randint(0,63)],
@@ -30,6 +32,7 @@ class Crypto(object):
 
     @staticmethod
     def GetChiSquaredError(text):
+        """Returns Chi-squared error for english text"""
         text = text.lower()
         frequency = Counter(text)
         error = 0.0
@@ -54,7 +57,12 @@ class Crypto(object):
 
     @staticmethod
     def IsEnglish(text):
-        "Checks if given ascii text is valid English."
+        """Checks if given ascii text is valid English.
+            check 1: all characters should be printable.
+            check 2: top 2 most frequent characters shoule be in ' etaoin'
+            check 3: at least 90% letters should be in [a-z ]
+            check 4: average word length should be in EN_AVG_LEN +-2 range
+        """
         text = text.lower()
         # check if all characters are printable
         if not all(c in string.printable for c in text):
@@ -94,7 +102,7 @@ class Crypto(object):
 
     @staticmethod
     def GetRepeatingXor(text, key):
-        """Sequentially apply each byte of the key to text and repeat"""
+        """Sequentially apply xor of each byte of the key to text and repeat"""
         xor = []
         for i, char in enumerate(text):
             key_char = key[i%len(key)]
@@ -103,13 +111,13 @@ class Crypto(object):
 
     @staticmethod
     def GetHammingDistance(text1, text2):
+        """Returns hamming distance for two strings of same size."""
         xor = map(lambda a,b : bin(ord(a) ^ ord(b)).count("1"), text1, text2)
         return sum(xor)
 
     @staticmethod
     def BreakSingleByteXor(cipher):
         """Breaks single byte xor cipher. Returns (text,key) on success."""
-
         errors = []
         for key in range(1,256):
             text = Crypto.GetRepeatingXor(cipher, chr(key))
@@ -125,7 +133,7 @@ class Crypto(object):
 
     @staticmethod
     def DetectSingleByteXor(ciphers):
-        """Detects single byte xor cipher."""
+        """Detects single byte xor cipher from the list of ciphers."""
         for cipher in ciphers:
             text,_ = Crypto.BreakSingleByteXor(cipher)
             if text and Crypto.IsEnglish(text): return text
@@ -133,6 +141,7 @@ class Crypto(object):
 
     @staticmethod
     def BreakKeyLength(cipher):
+        """Returns most promising key length for repeating xor cipher."""
         def GetHammingDistanceAverage(text, key_len):
             # text_len = len(text)
             # num_blocks = int(text_len / (2*key_len))
@@ -140,17 +149,21 @@ class Crypto(object):
             num_blocks = 10
             left = map(lambda x : x*key_len, range(num_blocks))
             right = map(lambda x : x*key_len + key_len, range(num_blocks))
-            blocks = zip(left, right)
+            block_indices = zip(left, right)
 
-            dist = sum(map(lambda (i,j) : Crypto.GetHammingDistance(text[i:i+key_len], text[j:j+key_len]), blocks))
-            return (dist / float(key_len)), key_len
+            block = lambda i : text[i:i+key_len]
+            dist = lambda (i,j) : Crypto.GetHammingDistance(block(i), block(j))
+            return (sum(map(dist, block_indices)) / float(key_len)), key_len
 
-        key_lengths = [GetHammingDistanceAverage(cipher, key_len) for key_len in range(2, 41)]
+        key_lengths = map(
+            lambda key_len : GetHammingDistanceAverage(cipher, key_len),
+            range(2, 41))
         key_lengths.sort()
         return key_lengths[0][1]
 
     @staticmethod
     def BreakRepeatingXor(cipher):
+        """Breaks repeating key xor cipher. Returns (plaintext, key)"""
         key_len = Crypto.BreakKeyLength(cipher)
         key = ''.join(map(
             lambda i: Crypto.BreakSingleByteXor(cipher[i::key_len])[1],
@@ -159,6 +172,7 @@ class Crypto(object):
 
     @staticmethod
     def DecryptAes(cipher, key, mode, iv=None):
+        """Decrypts AES cipher."""
         iv = iv if iv else Random.new().read(16)
         aes = AES.new(key, mode, iv)
         unpad = lambda s : s[:-ord(s[len(s)-1:])]
@@ -166,18 +180,34 @@ class Crypto(object):
 
     @staticmethod
     def EncryptAes(text, key, mode, iv=None):
+        """Encrypts AES cipher."""
         iv = iv if iv else Random.new().read(16)
         aes = AES.new(key, mode, iv)
         return aes.encrypt(Crypto.PadPkcs7(text))
 
     @staticmethod
+    def OracleEncryption(text):
+        """1) Apply 5-10 random letters at beginning and end of text.
+           2) Pick CBC or EBC mode randomly.
+           4) Generate 16 byte key randomly.
+           3) Apply AEC encryption using above inputs.
+           Returns (cipher, mode) pair.
+        """
+        text = Crypto.GenRandomKey(random.randint(5,10)) + text + \
+            Crypto.GenRandomKey(random.randint(5,10))
+        mode = AES.MODE_ECB if random.randint(0,1) == 0 else AES.MODE_CBC
+        return Crypto.EncryptAes(text, Crypto.GenRandomKey(16), mode), mode
+
+    @staticmethod
     def IsAesEcbCipher(cipher):
+        """Checks if given aes cipher is encrypted with ECB mode."""
         num_blocks = len(cipher) / 16
         blocks = map(lambda i: cipher[i*16:i*16+16], range(num_blocks))
         return Counter(blocks).most_common(1)[0][1] > 1
 
     @staticmethod
     def PadPkcs7(text, bs=16):
+        """Pads text with pkcs7 and returns padded text."""
         pad_size = bs - len(text) % bs
         pad_char = chr(pad_size)
         return text + pad_char*pad_size
