@@ -25,6 +25,8 @@ class TestSet2(unittest.TestCase):
         text = "YELLOW SUBMARINE"
         expected = "YELLOW SUBMARINE\x04\x04\x04\x04"
         self.assertEqual(expected, Crypto.PadPkcs7(text, 20))
+        text = "1234567890123456"
+        self.assertEqual(text, Crypto.PadPkcs7(text, 16))
 
     @Logger
     def testAesDecryptionCbcMode(self):
@@ -40,6 +42,19 @@ class TestSet2(unittest.TestCase):
             cipher, mode = Crypto.OracleEncryption(text)
             expected = True if mode == AES.MODE_ECB else False
             self.assertEqual(expected, Crypto.IsAesEcbCipher(cipher))
+
+    @Logger
+    def testAesEcbDecryptionByteWise(self):
+        unknown = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg\
+                   aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq\
+                   dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg\
+                   YnkK"
+        unknown = base64.b64decode(unknown)
+        key = Crypto.GenRandomKey(16)
+        append_and_encrypt = \
+            lambda text : Crypto.EncryptAes(text + unknown, key, AES.MODE_ECB)
+        text = Crypto.DecryptsAesEcbByteWise(append_and_encrypt)
+        self.assertEqual(unknown, text)
 
 
 if __name__ == '__main__':

@@ -183,7 +183,8 @@ class Crypto(object):
         """Encrypts AES cipher."""
         iv = iv if iv else Random.new().read(16)
         aes = AES.new(key, mode, iv)
-        return aes.encrypt(Crypto.PadPkcs7(text))
+        cipher = aes.encrypt(Crypto.PadPkcs7(text))
+        return cipher
 
     @staticmethod
     def OracleEncryption(text):
@@ -196,7 +197,8 @@ class Crypto(object):
         text = Crypto.GenRandomKey(random.randint(5,10)) + text + \
             Crypto.GenRandomKey(random.randint(5,10))
         mode = AES.MODE_ECB if random.randint(0,1) == 0 else AES.MODE_CBC
-        return Crypto.EncryptAes(text, Crypto.GenRandomKey(16), mode), mode
+        key = Crypto.GenRandomKey(16)
+        return Crypto.EncryptAes(text, key, mode), mode
 
     @staticmethod
     def IsAesEcbCipher(cipher):
@@ -208,7 +210,44 @@ class Crypto(object):
     @staticmethod
     def PadPkcs7(text, bs=16):
         """Pads text with pkcs7 and returns padded text."""
-        pad_size = bs - len(text) % bs
+        mod = len(text) % bs
+        pad_size = bs - mod if mod else 0
         pad_char = chr(pad_size)
         return text + pad_char*pad_size
+
+    @staticmethod
+    def DecryptsAesEcbByteWise(append_and_encrypt):
+        # find length of key and plaintext
+        text_len = 0
+        key_len = 0
+        for i in range(0,64):
+            text = '' if i == 0 else 'A'*i
+            cipher_len = len(append_and_encrypt(text))
+            if text_len and text_len != cipher_len:
+                key_len = cipher_len - text_len
+                text_len -= (i - 1)
+                break
+            text_len = cipher_len
+
+        # find if this is ECB mode
+        text = 'A'*2*key_len
+        if not Crypto.IsAesEcbCipher(append_and_encrypt(text)):
+            return None
+
+        result = ''
+        for i in range(1,text_len+1):
+            mod = i % key_len
+            pad_size = key_len - mod if mod else 0
+            known = 'A' * pad_size
+            ciphers = {}
+            # create dictionary
+            for c in range(256):
+                text = known + result + chr(c)
+                text = text[-key_len:]
+                ciphers[append_and_encrypt(text)[:key_len]] = text
+            # discover unknown one character at a time
+            end = i + pad_size
+            cipher = append_and_encrypt(known)[end-key_len:end]
+            result += ciphers[cipher][15]
+        return result
 
