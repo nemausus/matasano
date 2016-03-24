@@ -49,12 +49,36 @@ class TestSet2(unittest.TestCase):
                    aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq\
                    dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg\
                    YnkK"
-        unknown = base64.b64decode(unknown)
+        target = base64.b64decode(unknown)
         key = Crypto.GenRandomKey(16)
-        append_and_encrypt = \
-            lambda text : Crypto.EncryptAes(text + unknown, key, AES.MODE_ECB)
-        text = Crypto.DecryptsAesEcbByteWise(append_and_encrypt)
-        self.assertEqual(unknown, text)
+        aes_ecb = \
+            lambda text : Crypto.EncryptAes(text + target, key, AES.MODE_ECB)
+        text = Crypto.DecryptsAesEcbByteWise(aes_ecb)
+        self.assertEqual(target, text)
+
+    @Logger
+    def testEncryptionOfProfile(self):
+        key = Crypto.GenRandomKey(16)
+        prefix = Crypto.GenRandomKey(18)
+        target = "This is the target"
+        aes_ecb = lambda text : \
+            Crypto.EncryptAes(prefix + text + target, key, AES.MODE_ECB)
+        text = Crypto.DecryptsAesEcbByteWise(aes_ecb)
+        self.assertEqual(target, text)
+
+    @Logger
+    def testParseUrlParams(self):
+        params = Crypto.ParseUrlParams("foo=bar&baz=qux&zap=zazzle")
+        self.assertEqual(3, len(params))
+        self.assertEqual('bar', params['foo'])
+        self.assertEqual('qux', params['baz'])
+        self.assertEqual('zazzle', params['zap'])
+
+    @Logger
+    def testGetProfile(self):
+        self.assertEqual(
+            'email=foo@bar.com&uid=10&role=admin',
+            Crypto.GetProfile('foo&=@bar.com'))
 
 
 if __name__ == '__main__':

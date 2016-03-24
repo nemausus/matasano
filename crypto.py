@@ -216,38 +216,76 @@ class Crypto(object):
         return text + pad_char*pad_size
 
     @staticmethod
-    def DecryptsAesEcbByteWise(append_and_encrypt):
-        # find length of key and plaintext
+    def DecryptsAesEcbByteWise(aes_ecb):
+        """Given a block box AES encryption function of this form:
+        AES-ECB(random-prefix || attacker-controlled || target-bytes, random-key)
+        Finds and returns target-bytes.
+        """
+        # find length of key and plaintext (prefix + suffix)
         text_len = 0
         key_len = 0
         for i in range(0,64):
-            text = '' if i == 0 else 'A'*i
-            cipher_len = len(append_and_encrypt(text))
+            cipher_len = len(aes_ecb('A' * i))
             if text_len and text_len != cipher_len:
                 key_len = cipher_len - text_len
                 text_len -= (i - 1)
                 break
             text_len = cipher_len
 
+        # find length of prefix
+        c1 = aes_ecb('a')
+        c2 = aes_ecb('b')
+        # find which block is different in c1 and c2 which gives us some bound
+        # for prefix length
+        block_index = 0
+        for i in range(0, len(c1)/key_len):
+            start = i * key_len
+            if c1[start:start+key_len] != c2[start:start+key_len]:
+                block_index = i
+                break
+
+        # block_index*key_len <= prefix_len < (block_index+1)*key_len
+        # Assuming secret text doesn't has '\x00' characters. TODO: fix this
+        prefix_len = 0
+        last_cipher = ''
+        for i in range(1, key_len+2):
+            start = block_index * key_len
+            cipher = aes_ecb('\x00'*i)[start:start+key_len]
+            if cipher == last_cipher:
+                prefix_len = (block_index + 1) * key_len - i + 1
+                break
+            last_cipher = cipher
+
         # find if this is ECB mode
-        text = 'A'*2*key_len
-        if not Crypto.IsAesEcbCipher(append_and_encrypt(text)):
+        text = 'A'*3*key_len
+        if not Crypto.IsAesEcbCipher(aes_ecb(text)):
             return None
 
+        suffix_len = text_len - prefix_len
         result = ''
-        for i in range(1,text_len+1):
-            mod = i % key_len
+        for i in range(1,suffix_len+1):
+            mod = (i  + prefix_len) % key_len
             pad_size = key_len - mod if mod else 0
             known = 'A' * pad_size
-            ciphers = {}
+            block_index = (prefix_len + pad_size + len(result)) / key_len
+            start = block_index * key_len
             # create dictionary
+            ciphers = {}
             for c in range(256):
                 text = known + result + chr(c)
-                text = text[-key_len:]
-                ciphers[append_and_encrypt(text)[:key_len]] = text
+                ciphers[aes_ecb(text)[start:start+key_len]] = chr(c)
             # discover unknown one character at a time
-            end = i + pad_size
-            cipher = append_and_encrypt(known)[end-key_len:end]
-            result += ciphers[cipher][15]
+            cipher = aes_ecb(known)[start:start+key_len]
+            result += ciphers[cipher]
         return result
+
+    @staticmethod
+    def GetProfile(email):
+        email = email.replace('&', '').replace('=', '')
+        return "email=%s&uid=10&role=admin" % email
+
+    @staticmethod
+    def ParseUrlParams(params):
+        """Parse url params to a dictionary."""
+        return {k:v for k,v in map(lambda x: x.split('='), params.split('&'))}
 
