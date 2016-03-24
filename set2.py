@@ -29,6 +29,15 @@ class TestSet2(unittest.TestCase):
         self.assertEqual(text, Crypto.PadPkcs7(text, 16))
 
     @Logger
+    def testUnpadding(self):
+        self.assertEqual("ICE ICE BABY",
+                         Crypto.UnadPkcs7("ICE ICE BABY\x04\x04\x04\x04"))
+        self.assertEqual("ICE ICE BABY\x05\x05\x05\x05",
+                         Crypto.UnadPkcs7("ICE ICE BABY\x05\x05\x05\x05"))
+        self.assertEqual("ICE ICE BABY\x01\x02\x03\x04",
+                         Crypto.UnadPkcs7("ICE ICE BABY\x01\x02\x03\x04"))
+
+    @Logger
     def testAesDecryptionCbcMode(self):
         cipher = base64.b64decode(open("10.txt").read())
         iv = '\x00'*16

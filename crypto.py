@@ -171,20 +171,36 @@ class Crypto(object):
         return Crypto.GetRepeatingXor(cipher, key), key
 
     @staticmethod
+    def UnadPkcs7(text, bs=16):
+        """Unpads text with pkcs7 and returns unpadded text."""
+        if len(text) == 0 or len(text) % bs != 0:
+            raise ValueError("Input text length is invalid %s" + len(text))
+        pad_size = ord(text[-1:])
+        if pad_size < bs and all(ord(c) == pad_size for c in text[-pad_size:]):
+            return text[:-pad_size]
+        return text
+
+    @staticmethod
     def DecryptAes(cipher, key, mode, iv=None):
         """Decrypts AES cipher."""
         iv = iv if iv else Random.new().read(16)
         aes = AES.new(key, mode, iv)
-        unpad = lambda s : s[:-ord(s[len(s)-1:])]
-        return unpad(aes.decrypt(cipher))
+        return Crypto.UnadPkcs7(aes.decrypt(cipher))
+
+    @staticmethod
+    def PadPkcs7(text, bs=16):
+        """Pads text with pkcs7 and returns padded text."""
+        mod = len(text) % bs
+        pad_size = bs - mod if mod else 0
+        pad_char = chr(pad_size)
+        return text + pad_char*pad_size
 
     @staticmethod
     def EncryptAes(text, key, mode, iv=None):
         """Encrypts AES cipher."""
         iv = iv if iv else Random.new().read(16)
         aes = AES.new(key, mode, iv)
-        cipher = aes.encrypt(Crypto.PadPkcs7(text))
-        return cipher
+        return aes.encrypt(Crypto.PadPkcs7(text))
 
     @staticmethod
     def OracleEncryption(text):
@@ -206,14 +222,6 @@ class Crypto(object):
         num_blocks = len(cipher) / 16
         blocks = map(lambda i: cipher[i*16:i*16+16], range(num_blocks))
         return Counter(blocks).most_common(1)[0][1] > 1
-
-    @staticmethod
-    def PadPkcs7(text, bs=16):
-        """Pads text with pkcs7 and returns padded text."""
-        mod = len(text) % bs
-        pad_size = bs - mod if mod else 0
-        pad_char = chr(pad_size)
-        return text + pad_char*pad_size
 
     @staticmethod
     def DecryptsAesEcbByteWise(aes_ecb):
