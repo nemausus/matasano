@@ -66,7 +66,7 @@ class TestSet2(unittest.TestCase):
         self.assertEqual(target, text)
 
     @Logger
-    def testEncryptionOfProfile(self):
+    def testPrefixAesEcbDecryptionByteWise(self):
         key = Crypto.GenRandomKey(16)
         prefix = Crypto.GenRandomKey(18)
         target = "This is the target"
