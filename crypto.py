@@ -240,6 +240,8 @@ class Crypto(object):
                 break
             text_len = cipher_len
 
+        get_block = lambda text, index : text[key_len*index:key_len*(index+1)]
+
         # find length of prefix
         c1 = aes_ecb('a')
         c2 = aes_ecb('b')
@@ -247,21 +249,17 @@ class Crypto(object):
         # for prefix length
         block_index = 0
         for i in range(0, len(c1)/key_len):
-            start = i * key_len
-            if c1[start:start+key_len] != c2[start:start+key_len]:
-                block_index = i
-                break
+            block_index = i
+            if get_block(c1, i) != get_block(c2, i): break
 
         # block_index*key_len <= prefix_len < (block_index+1)*key_len
         # Assuming secret text doesn't has '\x00' characters. TODO: fix this
         prefix_len = 0
         last_cipher = ''
         for i in range(1, key_len+2):
-            start = block_index * key_len
-            cipher = aes_ecb('\x00'*i)[start:start+key_len]
-            if cipher == last_cipher:
-                prefix_len = (block_index + 1) * key_len - i + 1
-                break
+            cipher = get_block(aes_ecb('\x00'*i), block_index)
+            prefix_len = (block_index + 1) * key_len - i + 1
+            if cipher == last_cipher: break
             last_cipher = cipher
 
         # find if this is ECB mode
@@ -276,14 +274,13 @@ class Crypto(object):
             pad_size = key_len - mod if mod else 0
             known = 'A' * pad_size
             block_index = (prefix_len + pad_size + len(result)) / key_len
-            start = block_index * key_len
             # create dictionary
             ciphers = {}
             for c in range(256):
                 text = known + result + chr(c)
-                ciphers[aes_ecb(text)[start:start+key_len]] = chr(c)
+                ciphers[get_block(aes_ecb(text), block_index)] = chr(c)
             # discover unknown one character at a time
-            cipher = aes_ecb(known)[start:start+key_len]
+            cipher = get_block(aes_ecb(known), block_index)
             result += ciphers[cipher]
         return result
 
