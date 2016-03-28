@@ -331,18 +331,21 @@ class Crypto(object):
                 pad_size = bs - i
                 break
 
-        # last three bytes of second last cipher block
+        # we know pad size which means we know last pad_size bytes of result.
         prexor = Crypto.GetRepeatingXor(
             chr(pad_size)*pad_size, cipher[-pad_size-bs:-bs])
         iv_and_cipher = iv + cipher
         for i in range(len(prexor), len(cipher)):
             pad_size = (len(prexor) % bs) + 1
+            # decrypt byte at target_index in this iteration.
             target_index = len(cipher) - len(prexor) - 1
             for c in range(256):
+                # temper iv_and_cipher
                 attack = mutate(iv_and_cipher, target_index, chr(c))
                 xor = Crypto.GetRepeatingXor(
                     chr(pad_size)*(pad_size-1), prexor[:pad_size-1])
                 attack = attack[:target_index+1] + xor
+                # add next block
                 attack = attack + iv_and_cipher[len(attack):len(attack)+bs]
                 flipped_iv = attack[:bs]
                 flipped_cipher = attack[bs:]
