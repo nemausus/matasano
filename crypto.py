@@ -164,14 +164,22 @@ class Crypto(object):
         return Crypto.GetRepeatingXor(cipher, key), key
 
     @staticmethod
+    def PadPkcs7(text, bs=16):
+        """Pads text with pkcs7 and returns padded text."""
+        pad_size = bs - len(text) % bs
+        pad_char = chr(pad_size)
+        return text + pad_char*pad_size
+
+    @staticmethod
     def UnadPkcs7(text, bs=16):
         """Unpads text with pkcs7 and returns unpadded text."""
         if len(text) == 0 or len(text) % bs != 0:
             raise ValueError("Input text length is invalid %s" % len(text))
         pad_size = ord(text[-1:])
-        if pad_size < bs and all(ord(c) == pad_size for c in text[-pad_size:]):
-            return text[:-pad_size]
-        return text
+        padding = chr(pad_size)*pad_size
+        if padding != text[-pad_size:]:
+            raise ValueError("Invalid Padding.")
+        return text[:-pad_size]
 
     @staticmethod
     def DecryptAes(cipher, key, mode, iv=None):
@@ -179,14 +187,6 @@ class Crypto(object):
         iv = iv if iv else Random.new().read(16)
         aes = AES.new(key, mode, iv)
         return Crypto.UnadPkcs7(aes.decrypt(cipher))
-
-    @staticmethod
-    def PadPkcs7(text, bs=16):
-        """Pads text with pkcs7 and returns padded text."""
-        mod = len(text) % bs
-        pad_size = bs - mod if mod else 0
-        pad_char = chr(pad_size)
-        return text + pad_char*pad_size
 
     @staticmethod
     def EncryptAes(text, key, mode, iv=None):
@@ -234,7 +234,7 @@ class Crypto(object):
             cipher_len = len(aes_ecb('A' * i))
             if text_len and text_len != cipher_len:
                 key_len = cipher_len - text_len
-                text_len -= (i - 1)
+                text_len -= i
                 break
             text_len = cipher_len
 
@@ -293,6 +293,14 @@ class Crypto(object):
         return {k:v for k,v in map(lambda x: x.split('='), params.split('&'))}
 
     @staticmethod
+    def GenerateAesOracle(prefix, suffix, mode, quote, bs=16):
+        key = Crypto.GenRandomKey(bs)
+        iv =  Crypto.GenRandomKey(bs)
+        oracle = lambda text: Crypto.EncryptAes(
+            prefix + quote(text) + suffix, key, mode, iv)
+        return (oracle, key, iv)
+
+    @staticmethod
     def FlipCipherToAddAdmin(aes_cbc, has_admin):
         # this ensures at least one block has all X's
         bs = 16
@@ -304,5 +312,45 @@ class Crypto(object):
             if has_admin(flipped_cipher):
                 return True
         return False
+
+    @staticmethod
+    def BreakAesUsingPaddingLeak(cipher, iv, has_valid_padding):
+        """Decrypts cipher given has_valid_padding function which decrypts
+        and return true if result has valid padding, false otherwise. We will
+        use this leak to break the cipher and return plaintext"""
+        bs = 16
+        mutate = lambda text, i, c: text[:i] + c +  text[i+1:]
+        # get padding size
+        pad_size = 0
+        # second_last block index
+        sl_block = len(cipher) - bs*2
+        for i in range(bs):
+            # check if pad_size is bs - i
+            change = 'b' if cipher[sl_block+i] == 'a' else 'a'
+            if not has_valid_padding(mutate(cipher, sl_block+i, change), iv):
+                pad_size = bs - i
+                break
+
+        # last three bytes of second last cipher block
+        prexor = Crypto.GetRepeatingXor(
+            chr(pad_size)*pad_size, cipher[-pad_size-bs:-bs])
+        iv_and_cipher = iv + cipher
+        for i in range(len(prexor), len(cipher)):
+            pad_size = (len(prexor) % bs) + 1
+            target_index = len(cipher) - len(prexor) - 1
+            for c in range(256):
+                attack = mutate(iv_and_cipher, target_index, chr(c))
+                xor = Crypto.GetRepeatingXor(
+                    chr(pad_size)*(pad_size-1), prexor[:pad_size-1])
+                attack = attack[:target_index+1] + xor
+                attack = attack + iv_and_cipher[len(attack):len(attack)+bs]
+                flipped_iv = attack[:bs]
+                flipped_cipher = attack[bs:]
+                if has_valid_padding(flipped_cipher, flipped_iv):
+                    prexor = chr(pad_size^c) + prexor
+                    break
+        blocks = zip(Crypto.GetBlocks(iv_and_cipher), Crypto.GetBlocks(prexor))
+        return Crypto.UnadPkcs7(
+            ''.join(map(lambda (a,b) : Crypto.GetRepeatingXor(a,b), blocks)))
 
 

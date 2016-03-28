@@ -27,16 +27,16 @@ class TestSet2(unittest.TestCase):
         expected = "YELLOW SUBMARINE\x04\x04\x04\x04"
         self.assertEqual(expected, Crypto.PadPkcs7(text, 20))
         text = "1234567890123456"
-        self.assertEqual(text, Crypto.PadPkcs7(text, 16))
+        self.assertEqual(text + '\x10'*16, Crypto.PadPkcs7(text, 16))
 
     @Logger
     def testUnpadding(self):
-        self.assertEqual("ICE ICE BABY",
-                         Crypto.UnadPkcs7("ICE ICE BABY\x04\x04\x04\x04"))
-        self.assertEqual("ICE ICE BABY\x05\x05\x05\x05",
-                         Crypto.UnadPkcs7("ICE ICE BABY\x05\x05\x05\x05"))
-        self.assertEqual("ICE ICE BABY\x01\x02\x03\x04",
-                         Crypto.UnadPkcs7("ICE ICE BABY\x01\x02\x03\x04"))
+        self.assertEqual(
+            "ICE ICE BABY", Crypto.UnadPkcs7("ICE ICE BABY\x04\x04\x04\x04"))
+        self.assertRaises(
+            ValueError, Crypto.UnadPkcs7, "ICE ICE BABY\x05\x05\x05\x05")
+        self.assertRaises(
+            ValueError, Crypto.UnadPkcs7, "ICE ICE BABY\x01\x02\x03\x04")
 
     @Logger
     def testAesDecryptionCbcMode(self):
@@ -60,21 +60,22 @@ class TestSet2(unittest.TestCase):
                    dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg\
                    YnkK"
         target = base64.b64decode(unknown)
-        key = Crypto.GenRandomKey(16)
-        aes_ecb = \
-            lambda text : Crypto.EncryptAes(text + target, key, AES.MODE_ECB)
-        text = Crypto.DecryptsAesEcbByteWise(aes_ecb)
+        quote = lambda text: text
+        oracle,_,_ = Crypto.GenerateAesOracle('', target, AES.MODE_ECB, quote)
+        text = Crypto.DecryptsAesEcbByteWise(oracle)
         self.assertEqual(target, text)
 
     @Logger
     def testPrefixAesEcbDecryptionByteWise(self):
-        key = Crypto.GenRandomKey(16)
         prefix = Crypto.GenRandomKey(18)
         target = "This is the target"
-        aes_ecb = lambda text : Crypto.EncryptAes(
-            prefix + text + target, key, AES.MODE_ECB)
-        text = Crypto.DecryptsAesEcbByteWise(aes_ecb)
-        self.assertEqual(target, text)
+        quote = lambda text: text
+        oracle,_,_ = Crypto.GenerateAesOracle(prefix, target, AES.MODE_ECB, quote)
+        self.assertEqual(target, Crypto.DecryptsAesEcbByteWise(oracle))
+
+        target = "A"*16
+        oracle,_,_ = Crypto.GenerateAesOracle(prefix, target, AES.MODE_ECB, quote)
+        self.assertEqual(target, Crypto.DecryptsAesEcbByteWise(oracle))
 
     @Logger
     def testParseUrlParams(self):
@@ -94,15 +95,14 @@ class TestSet2(unittest.TestCase):
     def testCbcBitFlipping(self):
         prefix = "comment1=cooking%20MCs;userdata="
         suffix = ";comment2=%20like%20a%20pound%20of%20bacon"
-        bs = 16
-        iv = '\x00'*16
-        key = Crypto.GenRandomKey(bs)
-        aes_cbc = lambda text: Crypto.EncryptAes(
-            prefix + urllib.quote(text) + suffix, key, AES.MODE_CBC, iv)
+        oracle, key, _ = Crypto.GenerateAesOracle(
+            prefix, suffix, AES.MODE_CBC, urllib.quote)
+
         def has_admin(cipher):
-            text = Crypto.DecryptAes(cipher, key, AES.MODE_CBC, iv)
+            text = Crypto.DecryptAes(cipher, key, AES.MODE_CBC)
             return text.find(';admin=true;') != -1
-        self.assertTrue(Crypto.FlipCipherToAddAdmin(aes_cbc, has_admin))
+
+        self.assertTrue(Crypto.FlipCipherToAddAdmin(oracle, has_admin))
 
 
 if __name__ == '__main__':
