@@ -7,6 +7,7 @@ import random
 import string
 import sys
 import unittest
+import urllib
 from collections import Counter
 from Crypto.Cipher import AES
 from Crypto import Random
@@ -70,8 +71,8 @@ class TestSet2(unittest.TestCase):
         key = Crypto.GenRandomKey(16)
         prefix = Crypto.GenRandomKey(18)
         target = "This is the target"
-        aes_ecb = lambda text : \
-            Crypto.EncryptAes(prefix + text + target, key, AES.MODE_ECB)
+        aes_ecb = lambda text : Crypto.EncryptAes(
+            prefix + text + target, key, AES.MODE_ECB)
         text = Crypto.DecryptsAesEcbByteWise(aes_ecb)
         self.assertEqual(target, text)
 
@@ -88,6 +89,20 @@ class TestSet2(unittest.TestCase):
         self.assertEqual(
             'email=foo@bar.com&uid=10&role=admin',
             Crypto.GetProfile('foo&=@bar.com'))
+
+    @Logger
+    def testCbcBitFlipping(self):
+        prefix = "comment1=cooking%20MCs;userdata="
+        suffix = ";comment2=%20like%20a%20pound%20of%20bacon"
+        bs = 16
+        iv = '\x00'*16
+        key = Crypto.GenRandomKey(bs)
+        aes_cbc = lambda text: Crypto.EncryptAes(
+            prefix + urllib.quote(text) + suffix, key, AES.MODE_CBC, iv)
+        def has_admin(cipher):
+            text = Crypto.DecryptAes(cipher, key, AES.MODE_CBC, iv)
+            return text.find(';admin=true;') != -1
+        self.assertTrue(Crypto.FlipCipherToAddAdmin(aes_cbc, has_admin))
 
 
 if __name__ == '__main__':

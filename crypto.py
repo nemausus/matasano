@@ -139,21 +139,14 @@ class Crypto(object):
             if text and Crypto.IsEnglish(text): return text
         return None
 
+
     @staticmethod
     def BreakKeyLength(cipher):
         """Returns most promising key length for repeating xor cipher."""
         def GetHammingDistanceAverage(text, key_len):
-            # text_len = len(text)
-            # num_blocks = int(text_len / (2*key_len))
-            # TODO(naresh) : this is a hack
-            num_blocks = 10
-            left = map(lambda x : x*key_len, range(num_blocks))
-            right = map(lambda x : x*key_len + key_len, range(num_blocks))
-            block_indices = zip(left, right)
-
-            block = lambda i : text[i:i+key_len]
-            dist = lambda (i,j) : Crypto.GetHammingDistance(block(i), block(j))
-            return (sum(map(dist, block_indices)) / float(key_len)), key_len
+            blocks = Crypto.GetBlocks(text, key_len)
+            dist = lambda i : Crypto.GetHammingDistance(blocks[i], blocks[i+1])
+            return sum(map(dist, range(0, 12, 2))) / float(key_len), key_len
 
         key_lengths = map(
             lambda key_len : GetHammingDistanceAverage(cipher, key_len),
@@ -174,7 +167,7 @@ class Crypto(object):
     def UnadPkcs7(text, bs=16):
         """Unpads text with pkcs7 and returns unpadded text."""
         if len(text) == 0 or len(text) % bs != 0:
-            raise ValueError("Input text length is invalid %s" + len(text))
+            raise ValueError("Input text length is invalid %s" % len(text))
         pad_size = ord(text[-1:])
         if pad_size < bs and all(ord(c) == pad_size for c in text[-pad_size:]):
             return text[:-pad_size]
@@ -217,11 +210,16 @@ class Crypto(object):
         return Crypto.EncryptAes(text, key, mode), mode
 
     @staticmethod
+    def GetBlocks(text, bs=16):
+        num_blocks = len(text) / bs
+        return map(lambda i: text[i*bs:i*bs+bs], range(num_blocks))
+
+    @staticmethod
     def IsAesEcbCipher(cipher):
         """Checks if given aes cipher is encrypted with ECB mode."""
-        num_blocks = len(cipher) / 16
-        blocks = map(lambda i: cipher[i*16:i*16+16], range(num_blocks))
-        return Counter(blocks).most_common(1)[0][1] > 1
+        blocks = Crypto.GetBlocks(cipher)
+        unique_blocks = set(blocks)
+        return len(blocks) > len(unique_blocks) # has duplicate blocks
 
     @staticmethod
     def DecryptsAesEcbByteWise(aes_ecb):
@@ -293,4 +291,18 @@ class Crypto(object):
     def ParseUrlParams(params):
         """Parse url params to a dictionary."""
         return {k:v for k,v in map(lambda x: x.split('='), params.split('&'))}
+
+    @staticmethod
+    def FlipCipherToAddAdmin(aes_cbc, has_admin):
+        # this ensures at least one block has all X's
+        bs = 16
+        cipher = aes_cbc('x'*2*bs)
+        flipper = Crypto.GetRepeatingXor('x'*bs, ';admin=true;')
+        for i, block in enumerate(Crypto.GetBlocks(cipher, bs)):
+            flipped_cipher = cipher[:i*bs] + \
+                Crypto.GetRepeatingXor(flipper, block) + cipher[(i+1)*bs:]
+            if has_admin(flipped_cipher):
+                return True
+        return False
+
 
