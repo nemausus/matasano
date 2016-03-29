@@ -40,6 +40,24 @@ class TestSet2(unittest.TestCase):
                 line,
                 Crypto.BreakAesUsingPaddingLeak(cipher, iv, has_valid_padding))
 
+    @Logger
+    def testAesCtrEncryption(self):
+        counter = Crypto.GenAesStreamCounter()
+        key = "YELLOW SUBMARINE"
+        cipher = base64.b64decode("L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/2syLX" +\
+                "zhPweyyMTJULu/6/kXX0KSvoOLSFQ==")
+        text = "Yo, VIP Let's kick it Ice, Ice, baby Ice, Ice, baby "
+        self.assertEqual(
+            text, Crypto.DecryptAes(cipher, key, AES.MODE_CTR, counter=counter))
+        # another test
+        key = Crypto.GenRandomKey(16)
+        text = "Let there be light!"
+        counter = Crypto.GenAesStreamCounter()
+        cipher = Crypto.EncryptAes(text, key, AES.MODE_CTR, counter=counter)
+        counter = Crypto.GenAesStreamCounter()
+        self.assertEqual(
+            text, Crypto.DecryptAes(cipher, key, AES.MODE_CTR, counter=counter))
+
 
 if __name__ == '__main__':
     unittest.main()

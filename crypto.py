@@ -182,18 +182,27 @@ class Crypto(object):
         return text[:-pad_size]
 
     @staticmethod
-    def DecryptAes(cipher, key, mode, iv=None):
+    def DecryptAes(cipher, key, mode, IV=None, counter=None):
         """Decrypts AES cipher."""
-        iv = iv if iv else Random.new().read(16)
-        aes = AES.new(key, mode, iv)
-        return Crypto.UnadPkcs7(aes.decrypt(cipher))
+        IV = IV if IV else Random.new().read(len(key))
+        if mode == AES.MODE_ECB or mode == AES.MODE_CBC:
+            aes = AES.new(key, mode, IV=IV)
+            return Crypto.UnadPkcs7(aes.decrypt(cipher))
+        elif mode == AES.MODE_CTR:
+            aes = AES.new(key, mode, counter=counter)
+            return aes.decrypt(cipher)
 
     @staticmethod
-    def EncryptAes(text, key, mode, iv=None):
+    def EncryptAes(text, key, mode, IV=None, counter=None):
         """Encrypts AES cipher."""
-        iv = iv if iv else Random.new().read(16)
-        aes = AES.new(key, mode, iv)
-        return aes.encrypt(Crypto.PadPkcs7(text))
+        IV = IV if IV else Random.new().read(len(key))
+        if mode == AES.MODE_ECB or mode == AES.MODE_CBC:
+            aes = AES.new(key, mode, IV=IV)
+            return aes.encrypt(Crypto.PadPkcs7(text))
+        elif mode == AES.MODE_CTR:
+            aes = AES.new(key, mode, counter=counter)
+            return aes.encrypt(text)
+
 
     @staticmethod
     def OracleEncryption(text):
@@ -355,5 +364,16 @@ class Crypto(object):
         blocks = zip(Crypto.GetBlocks(iv_and_cipher), Crypto.GetBlocks(prexor))
         return Crypto.UnadPkcs7(
             ''.join(map(lambda (a,b) : Crypto.GetRepeatingXor(a,b), blocks)))
+
+
+    @staticmethod
+    def GenAesStreamCounter():
+        def GenCounter():
+            count = 0
+            while True:
+                yield chr(0)*8 + chr(count) + chr(0)*7
+                count += 1
+        counter = GenCounter()
+        return lambda : counter.next()
 
 
