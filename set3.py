@@ -59,17 +59,29 @@ class TestSet2(unittest.TestCase):
             text, Crypto.DecryptAes(cipher, key, AES.MODE_CTR, counter=counter))
 
     @Logger
-    def testBreakAesCtrWithFixedNonce(self):
-        key = Crypto.GenRandomKey(16)
-        counter = lambda : chr(0)*16
+    def testBreakAesCtrWithFixedNonce1(self):
+        bs = 16
+        key = Crypto.GenRandomKey(bs)
+        counter = lambda : chr(25)*bs
         texts = map(lambda l : base64.b64decode(l), open('19.txt').readlines())
         ciphers = map(
             lambda t : Crypto.EncryptAes(t, key, AES.MODE_CTR, counter=counter),
             texts)
-        expected = Crypto.GetRepeatingXor(ciphers[0] , texts[0])[:16]
-        actual = Crypto.BreakAesCtrWithFixedNonce(ciphers)
-        if expected != actual:
-            print sum(map(lambda (a,b): a == b, zip(expected, actual)))
+        expected = Crypto.GetRepeatingXor(ciphers[0] , texts[0])[:bs]
+        actual = Crypto.BreakAesCtrWithFixedNonce(ciphers, bs)
+        self.assertEquals(expected, actual)
+
+    @Logger
+    def testBreakAesCtrWithFixedNonce2(self):
+        bs = 16
+        key = Crypto.GenRandomKey(bs)
+        counter = lambda : chr(25)*bs
+        texts = map(lambda l : base64.b64decode(l), open('20.txt').readlines())
+        ciphers = map(
+            lambda t : Crypto.EncryptAes(t, key, AES.MODE_CTR, counter=counter),
+            texts)
+        expected = Crypto.GetRepeatingXor(ciphers[0], texts[0])[:bs]
+        actual = Crypto.BreakAesCtrWithFixedNonce(ciphers, bs)
         self.assertEquals(expected, actual)
 
 

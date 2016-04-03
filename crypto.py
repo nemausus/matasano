@@ -181,9 +181,9 @@ class Crypto(object):
         return key_lengths[0][1]
 
     @staticmethod
-    def BreakRepeatingXor(cipher):
+    def BreakRepeatingXor(cipher, key_len=0):
         """Breaks repeating key xor cipher. Returns (plaintext, key)"""
-        key_len = Crypto.BreakKeyLength(cipher)
+        key_len = key_len if key_len > 0 else Crypto.BreakKeyLength(cipher)
         key = ''.join(map(
             lambda i: Crypto.BreakSingleByteXor(cipher[i::key_len])[1],
             range(0, key_len)))
@@ -412,12 +412,14 @@ class Crypto(object):
         return filter(lambda bi: len(bi) == 2, bigrams)
 
     @staticmethod
-    def BreakAesCtrWithFixedNonce(ciphers):
-        key = ''
-        for i in range(0,16):
-            cipher = ''.join(map(lambda c : c[i::16], ciphers))
-            _, k = Crypto.BreakSingleByteXor(cipher)
-            key += k
+    def BreakAesCtrWithFixedNonce(ciphers, bs=16):
+        full_cipher = ''
+        for cipher in ciphers:
+            extra = len(cipher) % bs
+            if extra > 0:
+                cipher = cipher[:-extra]
+            full_cipher += cipher
+        text, key = Crypto.BreakRepeatingXor(full_cipher, bs)
         return key
 
 
