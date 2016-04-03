@@ -20,6 +20,19 @@ class Crypto(object):
         0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758,  # O-U
         0.00978, 0.02360, 0.00150, 0.01974, 0.00074]                    # V-Z ]
 
+    EN_BIGRAMS = {'th':0.0356, 'he':0.0307, 'in':0.0243, 'er':0.0205,
+            'an':0.0199, 're':0.0185, 'on':0.0176, 'at':0.0149, 'en':0.0145,
+            'nd':0.0135, 'ti':0.0134, 'es':0.0134, 'or':0.0128, 'te':0.0120,
+            'of':0.0117, 'ed':0.0117, 'is':0.0113, 'it':0.0112, 'al':0.0109,
+            'ar':0.0107, 'st':0.0105, 'to':0.0104, 'nt':0.0104, 'ng':0.0095,
+            'se':0.0093, 'ha':0.0093, 'as':0.0087, 'ou':0.0087, 'io':0.0083,
+            'le':0.0083, 've':0.0083, 'co':0.0079, 'me':0.0079, 'de':0.0076,
+            'hi':0.0076, 'ri':0.0073, 'ro':0.0073, 'ic':0.0070, 'ne':0.0069,
+            'ea':0.0069, 'ra':0.0069, 'ce':0.0065, 'li':0.0062, 'ch':0.0060,
+            'll':0.0058, 'be':0.0058, 'ma':0.0057, 'si':0.0055, 'om':0.0055,
+            'ur':0.0054}
+
+
     @staticmethod
     def GenRandomKey(length=16):
         """Returns random key of given length using base64 character set.
@@ -29,6 +42,19 @@ class Crypto(object):
             lambda i: alphabet[random.randint(0,63)],
             range(length)
         ))
+
+    @staticmethod
+    def GetBigramSquaredError(bigrams):
+        """Returns bigram squared error."""
+        bigrams = map(lambda b : b.lower(), bigrams)
+        frequency = Counter(bigrams)
+        error = 0.0
+        for bi in Crypto.EN_BIGRAMS:
+            expected = Crypto.EN_BIGRAMS[bi] if bi in Crypto.EN_BIGRAMS else 0.0
+            observed = frequency[bi] / float(len(bigrams))
+            error += (expected - observed)**2 / expected
+        return error;
+
 
     @staticmethod
     def GetChiSquaredError(text):
@@ -119,7 +145,7 @@ class Crypto(object):
     def BreakSingleByteXor(cipher):
         """Breaks single byte xor cipher. Returns (text,key) on success."""
         errors = []
-        for key in range(1,256):
+        for key in range(256):
             text = Crypto.GetRepeatingXor(cipher, chr(key))
             if all(c in string.printable for c in text):
                 errors.append((Crypto.GetChiSquaredError(text), chr(key)))
@@ -375,5 +401,23 @@ class Crypto(object):
                 count += 1
         counter = GenCounter()
         return lambda : counter.next()
+
+    @staticmethod
+    def GetBigrams(text):
+        words = text.split()
+        bigrams = []
+        for word in words:
+            bigrams.extend([word[i:i+2] for i in range(0, len(word), 2)])
+            bigrams.extend([word[i:i+2] for i in range(1, len(word), 2)])
+        return filter(lambda bi: len(bi) == 2, bigrams)
+
+    @staticmethod
+    def BreakAesCtrWithFixedNonce(ciphers):
+        key = ''
+        for i in range(0,16):
+            cipher = ''.join(map(lambda c : c[i::16], ciphers))
+            _, k = Crypto.BreakSingleByteXor(cipher)
+            key += k
+        return key
 
 
