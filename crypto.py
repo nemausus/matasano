@@ -9,6 +9,8 @@ import unittest
 from collections import Counter
 from Crypto.Cipher import AES
 from Crypto import Random
+from mt19937 import MT19937
+from time import time
 
 class Crypto(object):
 
@@ -421,5 +423,15 @@ class Crypto(object):
             full_cipher += cipher
         text, key = Crypto.BreakRepeatingXor(full_cipher, bs)
         return key
+
+    @staticmethod
+    def GenRandomNumber():
+        """Wait for 40 to 1000 seconds and then generate random number using
+        mt19937 randome generator"""
+        delay = random.randint(40,1000)
+        # substract delay to simulate sleep time
+        seed = int(time()) - delay
+        rng = MT19937(seed)
+        return rng.extract_number()
 
 

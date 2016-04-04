@@ -12,6 +12,8 @@ from collections import Counter
 from Crypto.Cipher import AES
 from Crypto import Random
 from crypto import Crypto
+from mt19937 import MT19937
+from time import time
 
 class TestSet2(unittest.TestCase):
 
@@ -83,6 +85,17 @@ class TestSet2(unittest.TestCase):
         expected = Crypto.GetRepeatingXor(ciphers[0], texts[0])[:bs]
         actual = Crypto.BreakAesCtrWithFixedNonce(ciphers, bs)
         self.assertEquals(expected, actual)
+
+    @Logger
+    def testMt19937(self):
+        num = Crypto.GenRandomNumber()
+        timenow = int(time())
+        found = False
+        for seed in range(timenow-1000,timenow):
+            if MT19937(seed).extract_number() == num:
+                found = True
+                break
+        self.assertTrue(found)
 
 
 if __name__ == '__main__':
