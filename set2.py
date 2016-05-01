@@ -40,14 +40,14 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testAesDecryptionCbcMode(self):
-        cipher = base64.b64decode(open("10.txt").read())
+        cipher = base64.b64decode(open("data/10.txt").read())
         iv = '\x00'*16
         text = Crypto.DecryptAes(cipher, "YELLOW SUBMARINE", AES.MODE_CBC, iv)
-        self.assertEqual(open('plaintext.txt').read(), text)
+        self.assertEqual(open('data/plaintext.txt').read(), text)
 
     @Logger
     def testAesEcbCbcMode(self):
-        text = open('plaintext.txt').read()
+        text = open('data/plaintext.txt').read()
         for i in range(20):
             cipher, mode = Crypto.OracleEncryption(text)
             expected = True if mode == AES.MODE_ECB else False

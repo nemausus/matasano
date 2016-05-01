@@ -45,7 +45,7 @@ class TestSet1(unittest.TestCase):
         expected = 'Now that the party is jumping\n'
         ciphers = map(
             lambda line: binascii.unhexlify(line.replace('\n', '')),
-            open('4.txt').readlines()
+            open('data/4.txt').readlines()
         )
         self.assertEqual(expected, Crypto.DetectSingleByteXor(ciphers))
 
@@ -62,22 +62,22 @@ class TestSet1(unittest.TestCase):
 
     @Logger
     def testBreakRepeatingXor(self):
-        cipher = base64.b64decode(open("6.txt").read())
+        cipher = base64.b64decode(open("data/6.txt").read())
         actual = Crypto.GetRepeatingXor(cipher, "Terminator X: Bring the noise")
         text, key = Crypto.BreakRepeatingXor(cipher)
         self.assertEqual("Terminator X: Bring the noise", key)
-        self.assertEqual(open('plaintext.txt').read(), text)
+        self.assertEqual(open('data/plaintext.txt').read(), text)
 
     @Logger
     def testAesDecryptionEcbMode(self):
-        cipher = base64.b64decode(open("7.txt").read())
+        cipher = base64.b64decode(open("data/7.txt").read())
         key = 'YELLOW SUBMARINE'
         text = Crypto.DecryptAes(cipher, key, AES.MODE_ECB)
-        self.assertEqual(open('plaintext.txt').read(), text)
+        self.assertEqual(open('data/plaintext.txt').read(), text)
 
     @Logger
     def testDetectAesEcbCipher(self):
-        content = open("8.txt").readlines()
+        content = open("data/8.txt").readlines()
         ciphers = map(lambda x: x.replace('\n', ''), content)
         num_detected = 0
         for cipher in ciphers:

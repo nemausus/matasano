@@ -35,7 +35,8 @@ class TestSet2(unittest.TestCase):
                 return False
             return True
 
-        lines = map(lambda l : base64.b64decode(l), open('17.txt').readlines())
+        lines = map(lambda l : base64.b64decode(l),
+                open('data/17.txt').readlines())
         for line in lines:
             cipher = Crypto.EncryptAes(line, key, AES.MODE_CBC, iv)
             self.assertEqual(
@@ -65,7 +66,8 @@ class TestSet2(unittest.TestCase):
         bs = 16
         key = Crypto.GenRandomKey(bs)
         counter = lambda : chr(25)*bs
-        texts = map(lambda l : base64.b64decode(l), open('19.txt').readlines())
+        texts = map(lambda l : base64.b64decode(l),
+                open('data/19.txt').readlines())
         ciphers = map(
             lambda t : Crypto.EncryptAes(t, key, AES.MODE_CTR, counter=counter),
             texts)
@@ -78,7 +80,8 @@ class TestSet2(unittest.TestCase):
         bs = 16
         key = Crypto.GenRandomKey(bs)
         counter = lambda : chr(25)*bs
-        texts = map(lambda l : base64.b64decode(l), open('20.txt').readlines())
+        texts = map(lambda l : base64.b64decode(l),
+                open('data/20.txt').readlines())
         ciphers = map(
             lambda t : Crypto.EncryptAes(t, key, AES.MODE_CTR, counter=counter),
             texts)
