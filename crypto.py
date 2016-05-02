@@ -439,21 +439,27 @@ class Crypto(object):
 
     @staticmethod
     def CloneMt19937Rng(rng):
+        """Returns clone of random number generator."""
         clone = MT19937(0)
-
         for i in range(624):
             y = rng.extract_number()
+            # Inverse of y = y ^ y >> 18
             y = y ^ y >> 18
+
+            # Inverse of y = y ^ y << 15 & 4022730752
             y = y ^ y << 15 & 4022730752
+
+            # Inverse of y = y ^ y << 7 & 2636928640
             # We have 7 correct bits and in each iteration we get 7 more bits.
             x = y ^ y << 7 & 2636928640
             x = y ^ x << 7 & 2636928640
             x = y ^ x << 7 & 2636928640
             y = y ^ x << 7 & 2636928640
+
+            # Inverse of y = y ^ y >> 11
             # We have 11 correct bits and in each iteration we get 11 more bits.
             x = y ^ y >> 11
             y = y ^ x >> 11
             clone.mt[i] = y
-
         return clone
 
