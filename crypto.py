@@ -326,17 +326,14 @@ class Crypto(object):
         return result
 
     @staticmethod
-    def GetProfile(email):
-        email = email.replace('&', '').replace('=', '')
-        return "email=%s&uid=10&role=admin" % email
-
-    @staticmethod
-    def ParseUrlParams(params):
-        """Parse url params to a dictionary."""
-        return {k:v for k,v in map(lambda x: x.split('='), params.split('&'))}
-
-    @staticmethod
     def GenerateAesOracle(prefix, suffix, mode, quote, bs=16):
+        """Returns a AES encrypt function which encrypts text as following
+        1. quote text using quote function.
+        1. Add prefix to text
+        2. Add suffix to text
+        3. key and intialization vector are generated randomly but consistent
+           across all runs.
+        """
         key = Crypto.GenRandomKey(bs)
         iv =  Crypto.GenRandomKey(bs)
         oracle = lambda text: Crypto.EncryptAes(

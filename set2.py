@@ -23,6 +23,7 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testPadding(self):
+        """Challenge 9"""
         text = "YELLOW SUBMARINE"
         expected = "YELLOW SUBMARINE\x04\x04\x04\x04"
         self.assertEqual(expected, Crypto.PadPkcs7(text, 20))
@@ -40,6 +41,7 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testAesDecryptionCbcMode(self):
+        """Challenge 10"""
         cipher = base64.b64decode(open("data/10.txt").read())
         iv = '\x00'*16
         text = Crypto.DecryptAes(cipher, "YELLOW SUBMARINE", AES.MODE_CBC, iv)
@@ -47,6 +49,7 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testAesEcbCbcMode(self):
+        """Challenge 11"""
         text = open('data/plaintext.txt').read()
         for i in range(20):
             cipher, mode = Crypto.OracleEncryption(text)
@@ -55,11 +58,9 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testAesEcbDecryptionByteWise(self):
-        unknown = "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg\
-                   aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq\
-                   dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg\
-                   YnkK"
-        target = base64.b64decode(unknown)
+        """Challenge 12"""
+        data = Crypto.GetLines('data/12.txt')[0]
+        target = base64.b64decode(data)
         quote = lambda text: text
         oracle,_,_ = Crypto.GenerateAesOracle('', target, AES.MODE_ECB, quote)
         text = Crypto.DecryptsAesEcbByteWise(oracle)
@@ -67,6 +68,7 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testPrefixAesEcbDecryptionByteWise(self):
+        """Challenge 14"""
         prefix = Crypto.GenRandomKey(18)
         target = "This is the target"
         quote = lambda text: text
@@ -78,21 +80,8 @@ class TestSet2(unittest.TestCase):
         self.assertEqual(target, Crypto.DecryptsAesEcbByteWise(oracle))
 
     @Logger
-    def testParseUrlParams(self):
-        params = Crypto.ParseUrlParams("foo=bar&baz=qux&zap=zazzle")
-        self.assertEqual(3, len(params))
-        self.assertEqual('bar', params['foo'])
-        self.assertEqual('qux', params['baz'])
-        self.assertEqual('zazzle', params['zap'])
-
-    @Logger
-    def testGetProfile(self):
-        self.assertEqual(
-            'email=foo@bar.com&uid=10&role=admin',
-            Crypto.GetProfile('foo&=@bar.com'))
-
-    @Logger
     def testCbcBitFlipping(self):
+        """Challenge 16"""
         prefix = "comment1=cooking%20MCs;userdata="
         suffix = ";comment2=%20like%20a%20pound%20of%20bacon"
         oracle, key, _ = Crypto.GenerateAesOracle(
