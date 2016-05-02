@@ -25,6 +25,7 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testBreakAesUsingPaddingLeak(self):
+        """Challenge 17"""
         quote = lambda text: text
         aes_cbc,key,iv = Crypto.GenerateAesOracle('', '', AES.MODE_CBC, quote)
 
@@ -45,6 +46,7 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testAesCtrEncryption(self):
+        """Challenge 18"""
         counter = Crypto.GenAesStreamCounter()
         key = "YELLOW SUBMARINE"
         cipher = base64.b64decode("L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/2syLX" +\
@@ -63,6 +65,7 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testBreakAesCtrWithFixedNonce1(self):
+        """Challenge 19"""
         bs = 16
         key = Crypto.GenRandomKey(bs)
         counter = lambda : chr(25)*bs
@@ -77,6 +80,7 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testBreakAesCtrWithFixedNonce2(self):
+        """Challenge 20"""
         bs = 16
         key = Crypto.GenRandomKey(bs)
         counter = lambda : chr(25)*bs
@@ -91,6 +95,7 @@ class TestSet2(unittest.TestCase):
 
     @Logger
     def testMt19937(self):
+        """Challenge 22"""
         num = Crypto.GenRandomNumber()
         timenow = int(time())
         found = False
