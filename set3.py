@@ -94,7 +94,7 @@ class TestSet2(unittest.TestCase):
         self.assertEquals(expected, actual)
 
     @Logger
-    def testMt19937(self):
+    def testMt19937Seed(self):
         """Challenge 22"""
         num = Crypto.GenRandomNumber()
         timenow = int(time())
@@ -104,6 +104,14 @@ class TestSet2(unittest.TestCase):
                 found = True
                 break
         self.assertTrue(found)
+
+    @Logger
+    def testMt19937Clone(self):
+        """Challenge 23"""
+        rng = MT19937(int(time()))
+        clone = Crypto.CloneMt19937Rng(rng)
+        for i in range(624):
+            self.assertEquals(rng.extract_number(), clone.extract_number())
 
 
 if __name__ == '__main__':
