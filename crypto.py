@@ -36,6 +36,12 @@ class Crypto(object):
 
 
     @staticmethod
+    def GetLines(filename):
+        """Read lines from from the file. Removed newline character at the end
+        before returning them."""
+        return map(lambda l: l.replace('\n', ''), open(filename).readlines())
+
+    @staticmethod
     def GenRandomKey(length=16):
         """Returns random key of given length using base64 character set.
            Default key length is 16."""
@@ -114,7 +120,7 @@ class Crypto(object):
         return True
 
     @staticmethod
-    def ConvertHexToBase64(hex_str):
+    def HexToBase64(hex_str):
         """Converts hex string to base64 string."""
         ascii_str = binascii.unhexlify(hex_str)
         # b2a_base64 appends a new line to result
