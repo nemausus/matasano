@@ -1,96 +1,90 @@
 #! /usr/bin/env python
 # author : Naresh Kumar
+"""Tests for set1 solutions."""
 
 import binascii
 import base64
-import string
-import sys
 import unittest
-from collections import Counter
 from Crypto.Cipher import AES
-from Crypto import Random
 from crypto import Crypto
+from crypto import logger
 from frequency_analyzer import FrequencyAnalyzer
 
 class TestSet1(unittest.TestCase):
+    """Tests for set1 solutions."""
 
-    def Logger(test):
-        def func(*args):
-            print "Running %s" % test.func_name
-            test(*args)
-        return func
 
-    @Logger
-    def testHexToBase64(self):
+    @logger
+    def test_hex_to_base64(self):
         """Challenge 1"""
-        expected, hex_str = Crypto.GetLines('data/1.txt')
-        actual = Crypto.HexToBase64(hex_str)
+        expected, hex_str = Crypto.get_lines('data/1.txt')
+        ascii_str = binascii.unhexlify(hex_str)
+        # b2a_base64 appends a new line to result
+        actual = binascii.b2a_base64(ascii_str)[:-1]
         self.assertEqual(expected, actual)
 
-    @Logger
-    def testFixedXor(self):
+    @logger
+    def test_fixed_xor(self):
         """Challenge 2"""
-        expected = '746865206b696420646f6e277420706c6179'
-        actual = Crypto.GetFixedXor('1c0111001f010100061a024b53535009181c',
-                                    '686974207468652062756c6c277320657965')
+        expected = binascii.unhexlify('746865206b696420646f6e277420706c6179')
+        actual = FrequencyAnalyzer.get_repeating_xor(
+            binascii.unhexlify('1c0111001f010100061a024b53535009181c'),
+            binascii.unhexlify('686974207468652062756c6c277320657965'))
         self.assertEqual(expected, actual)
 
-    @Logger
-    def testBreakSingleByteXor(self):
+    @logger
+    def test_break_single_byte_xor(self):
         """Challenge 3"""
         expected = "Cooking MC's like a pound of bacon"
-        hex_str = Crypto.GetLines('data/3.txt')[0]
+        hex_str = Crypto.get_lines('data/3.txt')[0]
         cipher = binascii.unhexlify(hex_str)
-        text, key = FrequencyAnalyzer.BreakSingleByteXor(cipher)
+        text, _ = FrequencyAnalyzer.break_single_byte_xor(cipher)
         self.assertEqual(expected, text)
 
-    @Logger
-    def testDetectSingleByteXor(self):
+    @logger
+    def test_detect_single_byte_xor(self):
         """Challenge 4"""
         expected = 'Now that the party is jumping\n'
-        ciphers = map(
-            lambda line: binascii.unhexlify(line.replace('\n', '')),
-            open('data/4.txt').readlines()
-        )
-        self.assertEqual(expected, Crypto.DetectSingleByteXor(ciphers))
+        ciphers = [binascii.unhexlify(line.replace('\n', ''))
+                   for line in open('data/4.txt').readlines()]
+        self.assertEqual(expected, Crypto.detect_single_byte_xor(ciphers))
 
-    @Logger
-    def testGetRepeatingXor(self):
+    @logger
+    def test_get_repeating_xor(self):
         """Challenge 5"""
-        expected, one, two = Crypto.GetLines('data/5.txt')
-        xor = FrequencyAnalyzer.GetRepeatingXor(one + '\n' + two, "ICE")
+        expected, one, two = Crypto.get_lines('data/5.txt')
+        xor = FrequencyAnalyzer.get_repeating_xor(one + '\n' + two, "ICE")
         self.assertEqual(expected, binascii.hexlify(xor))
 
-    @Logger
-    def testGetHammingDistance(self):
-        dist = Crypto.GetHammingDistance('this is a test', 'wokka wokka!!!')
+    @logger
+    def test_get_hamming_distance(self):
+        """Tests @get_hamming_distance"""
+        dist = Crypto.get_hamming_distance('this is a test', 'wokka wokka!!!')
         self.assertEqual(37, dist)
 
-    @Logger
-    def testBreakRepeatingXor(self):
+    @logger
+    def test_break_repeating_xor(self):
         """Challenge 6"""
         cipher = base64.b64decode(open("data/6.txt").read())
-        actual = FrequencyAnalyzer.GetRepeatingXor(
-            cipher, "Terminator X: Bring the noise")
-        text, key = Crypto.BreakRepeatingXor(cipher)
+        text, key = Crypto.break_repeating_xor(cipher)
         self.assertEqual("Terminator X: Bring the noise", key)
         self.assertEqual(open('data/plaintext.txt').read(), text)
 
-    @Logger
-    def testAesDecryptionEcbMode(self):
+    @logger
+    def test_aes_decryption_ecb_mode(self):
         """Challenge 7"""
         cipher = base64.b64decode(open("data/7.txt").read())
         key = 'YELLOW SUBMARINE'
-        text = Crypto.DecryptAes(cipher, key, AES.MODE_ECB)
+        text = Crypto.decrypt_aes(cipher, key, AES.MODE_ECB)
         self.assertEqual(open('data/plaintext.txt').read(), text)
 
-    @Logger
-    def testDetectAesEcbCipher(self):
+    @logger
+    def test_detect_aes_ecb_cipher(self):
         """Challenge 8"""
-        ciphers = Crypto.GetLines("data/8.txt")
+        ciphers = Crypto.get_lines("data/8.txt")
         num_detected = 0
         for cipher in ciphers:
-            if Crypto.IsAesEcbCipher(binascii.unhexlify(cipher)):
+            if Crypto.is_aes_ecb_cipher(binascii.unhexlify(cipher)):
                 num_detected += 1
         self.assertEqual(1, num_detected)
 
