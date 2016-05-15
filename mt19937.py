@@ -15,7 +15,7 @@ class MT19937:
             self.mt[i] = _int32(
                 1812433253 * (self.mt[i - 1] ^ self.mt[i - 1] >> 30) + i)
 
-    def extract_number(self):
+    def next(self):
         if self.index >= 624:
             self.twist()
 

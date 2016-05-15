@@ -10,6 +10,7 @@ from collections import Counter
 from Crypto.Cipher import AES
 from Crypto import Random
 from mt19937 import MT19937
+from mt19937_cipher import MT19937Cipher
 from time import time
 
 class Crypto(object):
@@ -326,7 +327,7 @@ class Crypto(object):
         return result
 
     @staticmethod
-    def GenerateAesOracle(prefix, suffix, mode, quote, bs=16):
+    def GenerateAesOracle(prefix, suffix, mode, quote, bs=16, counter=None):
         """Returns a AES encrypt function which encrypts text as following
         1. quote text using quote function.
         1. Add prefix to text
@@ -336,6 +337,9 @@ class Crypto(object):
         """
         key = Crypto.GenRandomKey(bs)
         iv =  Crypto.GenRandomKey(bs)
+        if mode == AES.MODE_CTR:
+            return (lambda text: Crypto.EncryptAes(
+                prefix + quote(text) + suffix, key, mode, counter=counter), key)
         oracle = lambda text: Crypto.EncryptAes(
             prefix + quote(text) + suffix, key, mode, iv)
         return (oracle, key, iv)
@@ -398,7 +402,8 @@ class Crypto(object):
 
 
     @staticmethod
-    def GenAesStreamCounter():
+    def GenAesStreamCounterSimple():
+        """Returns a simple stream couner limited to 256 characters."""
         def GenCounter():
             count = 0
             while True:
@@ -406,6 +411,20 @@ class Crypto(object):
                 count += 1
         counter = GenCounter()
         return lambda : counter.next()
+
+    @staticmethod
+    def GenAesStreamCounterRng(seed=None):
+        """Returns a RNG based stream couner."""
+        seed = seed if seed else int(time())
+        rng = MT19937(seed)
+        def next():
+            num = rng.next()
+            return ''.join([chr(num >> i & 0xff) for i in (24,16,8,0)])
+        return lambda : next() + next() + next() + next()
+
+    @staticmethod
+    def EncryptUsingMT19937():
+        pass
 
     @staticmethod
     def GetBigrams(text):
@@ -435,14 +454,14 @@ class Crypto(object):
         # substract delay to simulate sleep time
         seed = int(time()) - delay
         rng = MT19937(seed)
-        return rng.extract_number()
+        return rng.next()
 
     @staticmethod
     def CloneMt19937Rng(rng):
         """Returns clone of random number generator."""
         clone = MT19937(0)
         for i in range(624):
-            y = rng.extract_number()
+            y = rng.next()
             # Inverse of y = y ^ y >> 18
             y = y ^ y >> 18
 
@@ -462,4 +481,14 @@ class Crypto(object):
             y = y ^ x >> 11
             clone.mt[i] = y
         return clone
+
+    @staticmethod
+    def BreakRngStreamCipher(cipher, text_suffix):
+        """Breaks rng stream cipher and returns seed of rng."""
+        for i in range(1<<16):
+            mt_cipher = MT19937Cipher(i)
+            text = mt_cipher.decrypt(cipher)
+            if text.endswith(text_suffix):
+                return i
+        return -1
 
