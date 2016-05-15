@@ -14,6 +14,7 @@ import urllib
 from Crypto.Cipher import AES
 from Crypto import Random
 from crypto import Crypto
+from frequency_analyzer import FrequencyAnalyzer
 from mt19937 import MT19937
 from mt19937_cipher import MT19937Cipher
 
@@ -76,7 +77,7 @@ class TestSet3(unittest.TestCase):
         texts = map(lambda l : base64.b64decode(l),
             open('data/19.txt').readlines())
         ciphers = map(aes_ctr, texts)
-        expected = Crypto.GetRepeatingXor(ciphers[0], texts[0])[:bs]
+        expected = FrequencyAnalyzer.GetRepeatingXor(ciphers[0], texts[0])[:bs]
         actual = Crypto.BreakAesCtrWithFixedNonce(ciphers, bs)
         self.assertEquals(expected, actual)
 
@@ -91,7 +92,7 @@ class TestSet3(unittest.TestCase):
         texts = map(lambda l : base64.b64decode(l),
             open('data/20.txt').readlines())
         ciphers = map(aes_ctr, texts)
-        expected = Crypto.GetRepeatingXor(ciphers[0], texts[0])[:bs]
+        expected = FrequencyAnalyzer.GetRepeatingXor(ciphers[0], texts[0])[:bs]
         actual = Crypto.BreakAesCtrWithFixedNonce(ciphers, bs)
         self.assertEquals(expected, actual)
 

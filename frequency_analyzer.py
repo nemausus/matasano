@@ -108,3 +108,26 @@ class FrequencyAnalyzer(object):
         if diff > 2.0:
             return False
         return True
+
+
+    @staticmethod
+    def GetBigramSquaredError(bigrams):
+        """Returns bigram squared error."""
+        bigrams = map(lambda b : b.lower(), bigrams)
+        frequency = Counter(bigrams)
+        error = 0.0
+        for bi in Crypto.EN_BIGRAMS:
+            expected = EN_BIGRAMS[bi] if bi in EN_BIGRAMS else 0.0
+            observed = frequency[bi] / float(len(bigrams))
+            error += (expected - observed)**2 / expected
+        return error;
+
+
+    @staticmethod
+    def GetBigrams(text):
+        words = text.split()
+        bigrams = []
+        for word in words:
+            bigrams.extend([word[i:i+2] for i in range(0, len(word), 2)])
+            bigrams.extend([word[i:i+2] for i in range(1, len(word), 2)])
+        return filter(lambda bi: len(bi) == 2, bigrams)

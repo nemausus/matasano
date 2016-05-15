@@ -33,19 +33,6 @@ class Crypto(object):
         ))
 
     @staticmethod
-    def GetBigramSquaredError(bigrams):
-        """Returns bigram squared error."""
-        bigrams = map(lambda b : b.lower(), bigrams)
-        frequency = Counter(bigrams)
-        error = 0.0
-        for bi in Crypto.EN_BIGRAMS:
-            expected = Crypto.EN_BIGRAMS[bi] if bi in Crypto.EN_BIGRAMS else 0.0
-            observed = frequency[bi] / float(len(bigrams))
-            error += (expected - observed)**2 / expected
-        return error;
-
-
-    @staticmethod
     def HexToBase64(hex_str):
         """Converts hex string to base64 string."""
         ascii_str = binascii.unhexlify(hex_str)
@@ -324,18 +311,6 @@ class Crypto(object):
             return ''.join([chr(num >> i & 0xff) for i in (24,16,8,0)])
         return lambda : next() + next() + next() + next()
 
-    @staticmethod
-    def EncryptUsingMT19937():
-        pass
-
-    @staticmethod
-    def GetBigrams(text):
-        words = text.split()
-        bigrams = []
-        for word in words:
-            bigrams.extend([word[i:i+2] for i in range(0, len(word), 2)])
-            bigrams.extend([word[i:i+2] for i in range(1, len(word), 2)])
-        return filter(lambda bi: len(bi) == 2, bigrams)
 
     @staticmethod
     def BreakAesCtrWithFixedNonce(ciphers, bs=16):
@@ -393,4 +368,3 @@ class Crypto(object):
             if text.endswith(text_suffix):
                 return i
         return -1
-
