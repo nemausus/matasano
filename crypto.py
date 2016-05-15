@@ -11,30 +11,10 @@ from Crypto.Cipher import AES
 from Crypto import Random
 from mt19937 import MT19937
 from mt19937_cipher import MT19937Cipher
+from frequency_analyzer import FrequencyAnalyzer
 from time import time
 
 class Crypto(object):
-
-    EN_MOST_FREQUENT = ' etaoin'
-    EN_AVG_LEN = 4.56
-    EN_FREQUENCY = [
-        0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015,  # A-G
-        0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749,  # H-N
-        0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758,  # O-U
-        0.00978, 0.02360, 0.00150, 0.01974, 0.00074]                    # V-Z ]
-
-    EN_BIGRAMS = {'th':0.0356, 'he':0.0307, 'in':0.0243, 'er':0.0205,
-            'an':0.0199, 're':0.0185, 'on':0.0176, 'at':0.0149, 'en':0.0145,
-            'nd':0.0135, 'ti':0.0134, 'es':0.0134, 'or':0.0128, 'te':0.0120,
-            'of':0.0117, 'ed':0.0117, 'is':0.0113, 'it':0.0112, 'al':0.0109,
-            'ar':0.0107, 'st':0.0105, 'to':0.0104, 'nt':0.0104, 'ng':0.0095,
-            'se':0.0093, 'ha':0.0093, 'as':0.0087, 'ou':0.0087, 'io':0.0083,
-            'le':0.0083, 've':0.0083, 'co':0.0079, 'me':0.0079, 'de':0.0076,
-            'hi':0.0076, 'ri':0.0073, 'ro':0.0073, 'ic':0.0070, 'ne':0.0069,
-            'ea':0.0069, 'ra':0.0069, 'ce':0.0065, 'li':0.0062, 'ch':0.0060,
-            'll':0.0058, 'be':0.0058, 'ma':0.0057, 'si':0.0055, 'om':0.0055,
-            'ur':0.0054}
-
 
     @staticmethod
     def GetLines(filename):
@@ -66,61 +46,6 @@ class Crypto(object):
 
 
     @staticmethod
-    def GetChiSquaredError(text):
-        """Returns Chi-squared error for english text"""
-        text = text.lower()
-        frequency = Counter(text)
-        error = 0.0
-        text_len = len(text)
-        alpha = 0
-        for c in string.lowercase:
-            expected = Crypto.EN_FREQUENCY[ord(c) - ord('a')]
-            observed = frequency[c] / float(text_len)
-            error += (expected - observed)**2 / expected
-            alpha += frequency[c]
-
-        # Add error for space
-        observed = text.count(' ') / float(text_len)
-        expected = 1.0 / 1.0 + Crypto.EN_AVG_LEN
-        error += (expected - observed)**2 / expected
-
-        # Add error for non alpha characters
-        observed = alpha / float(text_len)
-        expected = 0.8
-        error += (expected - observed)**2 / expected
-        return error
-
-    @staticmethod
-    def IsEnglish(text):
-        """Checks if given ascii text is valid English.
-            check 1: all characters should be printable.
-            check 2: top 2 most frequent characters shoule be in ' etaoin'
-            check 3: at least 90% letters should be in [a-z ]
-            check 4: average word length should be in EN_AVG_LEN +-2 range
-        """
-        text = text.lower()
-        # check if all characters are printable
-        if not all(c in string.printable for c in text):
-            return False
-        # check if 2 most common letters in text are among English's most
-        # frequent letters.
-        frequency = Counter(text)
-        if not all(c in Crypto.EN_MOST_FREQUENT for c,_ in frequency.most_common(2)):
-            return False
-        # check if at least 90% of letters are among a-z and space.
-        myset = 'abcdefghijklmnopqrstuvwxyz '
-        count = sum(map(lambda c: 1 if c in myset else 0, text))
-        if not count/float(len(text)) > 0.90:
-            return False
-        # check if average word length in text is close to average word length
-        # of English.
-        word_len = len(text)/float(len(text.split()))
-        diff = abs(word_len - Crypto.EN_AVG_LEN)
-        if diff > 2.0:
-            return False
-        return True
-
-    @staticmethod
     def HexToBase64(hex_str):
         """Converts hex string to base64 string."""
         ascii_str = binascii.unhexlify(hex_str)
@@ -135,14 +60,6 @@ class Crypto(object):
         xor = ''.join(map(lambda a,b : chr(ord(a)^ord(b)), ascii1, ascii2))
         return binascii.hexlify(xor)
 
-    @staticmethod
-    def GetRepeatingXor(text, key):
-        """Sequentially apply xor of each byte of the key to text and repeat"""
-        xor = []
-        for i, char in enumerate(text):
-            key_char = key[i%len(key)]
-            xor.append(chr(ord(key_char) ^ ord(char)))
-        return ''.join(xor)
 
     @staticmethod
     def GetHammingDistance(text1, text2):
@@ -150,28 +67,13 @@ class Crypto(object):
         xor = map(lambda a,b : bin(ord(a) ^ ord(b)).count("1"), text1, text2)
         return sum(xor)
 
-    @staticmethod
-    def BreakSingleByteXor(cipher):
-        """Breaks single byte xor cipher. Returns (text,key) on success."""
-        errors = []
-        for key in range(256):
-            text = Crypto.GetRepeatingXor(cipher, chr(key))
-            if all(c in string.printable for c in text):
-                errors.append((Crypto.GetChiSquaredError(text), chr(key)))
-
-        if len(errors) == 0:
-            return None, None
-        else:
-            errors.sort()
-            key = errors[0][1]
-            return Crypto.GetRepeatingXor(cipher, key), key
 
     @staticmethod
     def DetectSingleByteXor(ciphers):
         """Detects single byte xor cipher from the list of ciphers."""
         for cipher in ciphers:
-            text,_ = Crypto.BreakSingleByteXor(cipher)
-            if text and Crypto.IsEnglish(text): return text
+            text,_ = FrequencyAnalyzer.BreakSingleByteXor(cipher)
+            if text and FrequencyAnalyzer.IsEnglish(text): return text
         return None
 
 
@@ -194,9 +96,9 @@ class Crypto(object):
         """Breaks repeating key xor cipher. Returns (plaintext, key)"""
         key_len = key_len if key_len > 0 else Crypto.BreakKeyLength(cipher)
         key = ''.join(map(
-            lambda i: Crypto.BreakSingleByteXor(cipher[i::key_len])[1],
-            range(0, key_len)))
-        return Crypto.GetRepeatingXor(cipher, key), key
+            lambda i: FrequencyAnalyzer.BreakSingleByteXor(
+                cipher[i::key_len])[1], range(0, key_len)))
+        return FrequencyAnalyzer.GetRepeatingXor(cipher, key), key
 
     @staticmethod
     def PadPkcs7(text, bs=16):
@@ -349,10 +251,10 @@ class Crypto(object):
         # this ensures at least one block has all X's
         bs = 16
         cipher = aes_cbc('x'*2*bs)
-        flipper = Crypto.GetRepeatingXor('x'*bs, ';admin=true;')
+        flipper = FrequencyAnalyzer.GetRepeatingXor('x'*bs, ';admin=true;')
         for i, block in enumerate(Crypto.GetBlocks(cipher, bs)):
-            flipped_cipher = cipher[:i*bs] + \
-                Crypto.GetRepeatingXor(flipper, block) + cipher[(i+1)*bs:]
+            flipped_cipher = cipher[:i*bs] + FrequencyAnalyzer.GetRepeatingXor(
+                flipper, block) + cipher[(i+1)*bs:]
             if has_admin(flipped_cipher):
                 return True
         return False
@@ -376,7 +278,7 @@ class Crypto(object):
                 break
 
         # we know pad size which means we know last pad_size bytes of result.
-        prexor = Crypto.GetRepeatingXor(
+        prexor = FrequencyAnalyzer.GetRepeatingXor(
             chr(pad_size)*pad_size, cipher[-pad_size-bs:-bs])
         iv_and_cipher = iv + cipher
         for i in range(len(prexor), len(cipher)):
@@ -386,7 +288,7 @@ class Crypto(object):
             for c in range(256):
                 # temper iv_and_cipher
                 attack = mutate(iv_and_cipher, target_index, chr(c))
-                xor = Crypto.GetRepeatingXor(
+                xor = FrequencyAnalyzer.GetRepeatingXor(
                     chr(pad_size)*(pad_size-1), prexor[:pad_size-1])
                 attack = attack[:target_index+1] + xor
                 # add next block
@@ -397,8 +299,8 @@ class Crypto(object):
                     prexor = chr(pad_size^c) + prexor
                     break
         blocks = zip(Crypto.GetBlocks(iv_and_cipher), Crypto.GetBlocks(prexor))
-        return Crypto.UnadPkcs7(
-            ''.join(map(lambda (a,b) : Crypto.GetRepeatingXor(a,b), blocks)))
+        return Crypto.UnadPkcs7(''.join(map(lambda (a,b) : \
+            FrequencyAnalyzer.GetRepeatingXor(a,b), blocks)))
 
 
     @staticmethod

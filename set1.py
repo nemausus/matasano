@@ -10,6 +10,7 @@ from collections import Counter
 from Crypto.Cipher import AES
 from Crypto import Random
 from crypto import Crypto
+from frequency_analyzer import FrequencyAnalyzer
 
 class TestSet1(unittest.TestCase):
 
@@ -40,7 +41,7 @@ class TestSet1(unittest.TestCase):
         expected = "Cooking MC's like a pound of bacon"
         hex_str = Crypto.GetLines('data/3.txt')[0]
         cipher = binascii.unhexlify(hex_str)
-        text, key = Crypto.BreakSingleByteXor(cipher)
+        text, key = FrequencyAnalyzer.BreakSingleByteXor(cipher)
         self.assertEqual(expected, text)
 
     @Logger
@@ -57,7 +58,7 @@ class TestSet1(unittest.TestCase):
     def testGetRepeatingXor(self):
         """Challenge 5"""
         expected, one, two = Crypto.GetLines('data/5.txt')
-        xor = Crypto.GetRepeatingXor(one + '\n' + two, "ICE")
+        xor = FrequencyAnalyzer.GetRepeatingXor(one + '\n' + two, "ICE")
         self.assertEqual(expected, binascii.hexlify(xor))
 
     @Logger
@@ -69,7 +70,8 @@ class TestSet1(unittest.TestCase):
     def testBreakRepeatingXor(self):
         """Challenge 6"""
         cipher = base64.b64decode(open("data/6.txt").read())
-        actual = Crypto.GetRepeatingXor(cipher, "Terminator X: Bring the noise")
+        actual = FrequencyAnalyzer.GetRepeatingXor(
+            cipher, "Terminator X: Bring the noise")
         text, key = Crypto.BreakRepeatingXor(cipher)
         self.assertEqual("Terminator X: Bring the noise", key)
         self.assertEqual(open('data/plaintext.txt').read(), text)
