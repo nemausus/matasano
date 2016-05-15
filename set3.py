@@ -17,11 +17,11 @@ from crypto import Crypto
 from mt19937 import MT19937
 from mt19937_cipher import MT19937Cipher
 
-class TestSet2(unittest.TestCase):
+class TestSet3(unittest.TestCase):
 
     def Logger(test):
         def func(*args):
-            print "\nRunning %s" % test.func_name
+            print "Running %s" % test.func_name
             test(*args)
         return func
 
@@ -127,4 +127,4 @@ class TestSet2(unittest.TestCase):
         self.assertEquals(seed, Crypto.BreakRngStreamCipher(cipher, text))
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=0)

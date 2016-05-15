@@ -15,7 +15,7 @@ class TestSet1(unittest.TestCase):
 
     def Logger(test):
         def func(*args):
-            print "\nRunning %s" % test.func_name
+            print "Running %s" % test.func_name
             test(*args)
         return func
 
@@ -93,4 +93,4 @@ class TestSet1(unittest.TestCase):
         self.assertEqual(1, num_detected)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=0)

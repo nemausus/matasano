@@ -17,7 +17,7 @@ class TestSet2(unittest.TestCase):
 
     def Logger(test):
         def func(*args):
-            print "\nRunning %s" % test.func_name
+            print "Running %s" % test.func_name
             test(*args)
         return func
 
@@ -95,4 +95,4 @@ class TestSet2(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=0)
