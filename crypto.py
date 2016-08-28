@@ -6,7 +6,7 @@ from time import time
 from Crypto.Cipher import AES
 from Crypto import Random
 from mt19937 import MT19937RNG
-from mt19937 import MT19937Cipher
+from mt19937 import MT19937Cipther
 from frequency_analyzer import FrequencyAnalyzer
 
 def logger(test):
@@ -40,6 +40,7 @@ class Crypto(object):
     @staticmethod
     def get_hamming_distance(text1, text2):
         """Returns hamming distance for two strings of same size."""
+        # The Hamming distance is just the number of differing bits.
         xor = [bin(ord(a) ^ ord(b)).count("1") for a, b in zip(text1, text2)]
         return sum(xor)
 
@@ -67,12 +68,15 @@ class Crypto(object):
         key_lengths = [get_hamming_distance_average(cipher, key_len)
                        for key_len in range(2, 41)]
         key_lengths.sort()
+        # The KEYSIZE with the smallest normalized edit distance is probably
+        # the key.
         return key_lengths[0][1]
 
     @staticmethod
     def break_repeating_xor(cipher, key_len=0):
         """Breaks repeating key xor cipher. Returns (plaintext, key)"""
         key_len = key_len if key_len > 0 else Crypto.break_key_length(cipher)
+        # Solve each block as if it was single-character XOR.
         key = ''.join([FrequencyAnalyzer.break_single_byte_xor(
             cipher[i::key_len])[1] for i in range(0, key_len)])
         return FrequencyAnalyzer.get_repeating_xor(cipher, key), key
@@ -80,12 +84,14 @@ class Crypto(object):
     @staticmethod
     def pad_pkcs7(text, block_size=16):
         """Pads text with pkcs7 and returns padded text."""
+        # Important: padding is added even if message length is multiple of
+        # block size.
         pad_size = block_size - len(text) % block_size
         pad_char = chr(pad_size)
         return text + pad_char*pad_size
 
     @staticmethod
-    def unad_pkcs7(text, block_size=16):
+    def unpad_pkcs7(text, block_size=16):
         """Unpads text with pkcs7 and returns unpadded text."""
         if len(text) == 0 or len(text) % block_size != 0:
             raise ValueError("Input text length is invalid %s" % len(text))
@@ -96,13 +102,37 @@ class Crypto(object):
         return text[:-pad_size]
 
     @staticmethod
+    def encrypt_cbc_using_ecb(text, key):
+        """Implement AES CBC using AES ECB."""
+        iv = '\x00'*16
+        cipher = ''
+        aes = AES.new(key, AES.MODE_ECB)
+        for block in Crypto.get_blocks(Crypto.pad_pkcs7(text)):
+            block = FrequencyAnalyzer.get_repeating_xor(block, iv)
+            iv = aes.encrypt(block)
+            cipher += iv
+        return cipher
+
+    @staticmethod
+    def decrypt_cbc_using_ecb(cipher, key):
+        """Implement AES CBC using AES ECB."""
+        iv = '\x00'*16
+        text = ''
+        aes = AES.new(key, AES.MODE_ECB)
+        for block in Crypto.get_blocks(cipher):
+            temp = aes.decrypt(block)
+            text += FrequencyAnalyzer.get_repeating_xor(temp, iv)
+            iv = block
+        return Crypto.unpad_pkcs7(text)
+
+    @staticmethod
     def decrypt_aes(cipher, key, mode, init_vector=None, counter=None):
         """Decrypts AES cipher."""
         if not init_vector:
             init_vector = Random.new().read(len(key))
         if mode == AES.MODE_ECB or mode == AES.MODE_CBC:
             aes = AES.new(key, mode, IV=init_vector)
-            return Crypto.unad_pkcs7(aes.decrypt(cipher))
+            return Crypto.unpad_pkcs7(aes.decrypt(cipher))
         elif mode == AES.MODE_CTR:
             aes = AES.new(key, mode, counter=counter)
             return aes.decrypt(cipher)
@@ -144,6 +174,9 @@ class Crypto(object):
     @staticmethod
     def is_aes_ecb_cipher(cipher):
         """Checks if given aes cipher is encrypted with ECB mode."""
+        # The problem with ECB is that it is stateless and deterministic; the
+        # same 16 byte plaintext block will always produce the same 16 byte
+        # ciphertext.
         blocks = Crypto.get_blocks(cipher)
         unique_blocks = set(blocks)
         return len(blocks) > len(unique_blocks) # has duplicate blocks
@@ -157,6 +190,7 @@ class Crypto(object):
         # find length of key and plaintext (prefix + suffix)
         text_len = 0
         key_len = 0
+        # iterate until cipher len makes step change.
         for i in range(0, 64):
             cipher_len = len(aes_ecb('A' * i))
             if text_len and text_len != cipher_len:
@@ -183,6 +217,7 @@ class Crypto(object):
         # Assuming secret text doesn't has '\x00' characters. TODO: fix this
         prefix_len = 0
         last_cipher = ''
+        # iterate until target block stops changing.
         for i in range(1, key_len+2):
             cipher = get_block(aes_ecb('\x00'*i), block_index)
             prefix_len = (block_index + 1) * key_len - i + 1
@@ -197,14 +232,16 @@ class Crypto(object):
 
         suffix_len = text_len - prefix_len
         result = ''
-        for i in range(1, suffix_len+1):
-            mod = (i  + prefix_len) % key_len
+        # break target text byte wise.
+        for i in range(1, suffix_len + 1):
+            mod = (i + prefix_len) % key_len
             pad_size = key_len - mod if mod else 0
             known = 'A' * pad_size
             block_index = (prefix_len + pad_size + len(result)) / key_len
             # create dictionary
             ciphers = {}
             for char in range(256):
+                # final text format |PPPPPPPPPPAAAAA*|SSSSSSSSSSSSSSSS|
                 text = known + result + chr(char)
                 ciphers[get_block(aes_ecb(text), block_index)] = chr(char)
             # discover unknown one character at a time
@@ -239,6 +276,7 @@ class Crypto(object):
         cipher = aes_cbc('x'*2*block_size)
         flipper = FrequencyAnalyzer.get_repeating_xor(
             'x'*block_size, ';admin=true;')
+        # XXXXX xor ;admin=true; xor XXXXX => ;admin=true;
         for i, block in enumerate(Crypto.get_blocks(cipher, block_size)):
             flipped_block = FrequencyAnalyzer.get_repeating_xor(flipper, block)
             flipped_cipher = (cipher[:i*block_size] +
@@ -291,13 +329,13 @@ class Crypto(object):
                     break
         blocks = zip(
             Crypto.get_blocks(iv_and_cipher), Crypto.get_blocks(prexor))
-        return Crypto.unad_pkcs7(''.join(
+        return Crypto.unpad_pkcs7(''.join(
             [FrequencyAnalyzer.get_repeating_xor(a, b) for a, b in blocks]))
 
 
     @staticmethod
     def gen_aes_stream_counter_simple():
-        """Returns a simple stream couner limited to 256 characters."""
+        """Returns a simple stream counter limited to 256 characters."""
         def gen_counter():
             """counter generator."""
             count = 0

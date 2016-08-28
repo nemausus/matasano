@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # author : Naresh Kumar
-"""Tests for set 3 solutions."""
+"""Block and stream crypto."""
 
 import base64
 import unittest

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # author : Naresh Kumar
-"""Tests for set 2 solutions."""
+"""Block Crypto."""
 
 import base64
 import unittest
@@ -25,23 +25,23 @@ class TestSet2(unittest.TestCase):
     def test_unpadding(self):
         """Tests for unpadding."""
         self.assertEqual(
-            "ICE ICE BABY", Crypto.unad_pkcs7("ICE ICE BABY\x04\x04\x04\x04"))
+            "ICE ICE BABY", Crypto.unpad_pkcs7("ICE ICE BABY\x04\x04\x04\x04"))
         self.assertRaises(
-            ValueError, Crypto.unad_pkcs7, "ICE ICE BABY\x05\x05\x05\x05")
+            ValueError, Crypto.unpad_pkcs7, "ICE ICE BABY\x05\x05\x05\x05")
         self.assertRaises(
-            ValueError, Crypto.unad_pkcs7, "ICE ICE BABY\x01\x02\x03\x04")
+            ValueError, Crypto.unpad_pkcs7, "ICE ICE BABY\x01\x02\x03\x04")
 
     @logger
-    def test_aes_decryption_cbc_mode(self):
+    def test_cbc_using_ecb(self):
         """Challenge 10"""
         cipher = base64.b64decode(open("data/10.txt").read())
-        init_vector = '\x00'*16
-        text = Crypto.decrypt_aes(
-            cipher, "YELLOW SUBMARINE", AES.MODE_CBC, init_vector)
+        key = "YELLOW SUBMARINE"
+        text = Crypto.decrypt_cbc_using_ecb(cipher, key)
         self.assertEqual(open('data/plaintext.txt').read(), text)
+        self.assertEquals(cipher, Crypto.encrypt_cbc_using_ecb(text, key))
 
     @logger
-    def test_aes_ecb_cbc_mode(self):
+    def test_ecb_or_cbc_mode(self):
         """Challenge 11"""
         text = open('data/plaintext.txt').read()
         for _ in range(20):

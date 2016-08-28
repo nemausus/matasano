@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # author : Naresh Kumar
-"""Tests for set1 solutions."""
+"""Basics."""
 
 import binascii
 import base64
@@ -12,7 +12,6 @@ from frequency_analyzer import FrequencyAnalyzer
 
 class TestSet1(unittest.TestCase):
     """Tests for set1 solutions."""
-
 
     @logger
     def test_hex_to_base64(self):
