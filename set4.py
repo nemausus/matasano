@@ -13,6 +13,7 @@ from crypto import logger
 from frequency_analyzer import FrequencyAnalyzer
 from mt19937 import MT19937RNG
 from mt19937 import MT19937Cipher
+from sha1 import sha1
 
 class TestSet4(unittest.TestCase):
     """Tests for set 4 solutions."""
@@ -77,6 +78,12 @@ class TestSet4(unittest.TestCase):
         cipher = Crypto.encrypt_aes("X"*48, key, AES.MODE_CBC, iv)
         self.assertEquals(key,
                 Crypto.extract_key_if_key_is_same_as_key(cipher, oracle))
+
+    @logger
+    def test_sha1(self):
+        """Challenge 28"""
+        self.assertEquals("da728ec3a1c9fc32a758559f49bb9425e922d4bc",
+                sha1("naresh"))
 
 if __name__ == '__main__':
     unittest.main(verbosity=0)
