@@ -65,14 +65,17 @@ class Sha1Hash(object):
     digest_size = 20
     block_size = 64
 
-    def __init__(self):
+    def __init__(self, h=None, length=0):
         # Initial digest variables
-        self._h = (0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0)
+        if h:
+            self._h = h
+        else:
+            self._h = (0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0)
         # bytes object with 0 <= len < 64 used to store the end of the message
         # if the message length is not congruent to 64
         self._unprocessed = b''
         # Length in bytes of all data that has been processed so far
-        self._message_byte_length = 0
+        self._message_byte_length = length
 
     def update(self, arg):
         """Update the current digest.
@@ -128,7 +131,22 @@ class Sha1Hash(object):
             return h
         return _process_chunk(message[64:], *h)
 
-def sha1(data):
+def add_padding(message):
+    message_byte_length = len(message)
+    # append the bit '1' to the message
+    message += b'\x80'
+
+    # append 0 <= k < 512 bits '0', so that the resulting message length
+    # (in bytes) is congruent to 56 (mod 64)
+    message += b'\x00' * ((56 - (message_byte_length + 1) % 64) % 64)
+
+    # append length of message (before pre-processing), in bits, as 64-bit
+    # big-endian integer
+    message_bit_length = message_byte_length * 8
+    message += struct.pack(b'>Q', message_bit_length)
+    return message
+
+def sha1(data, h=None, length=0):
     """SHA-1 Hashing Function
     A custom SHA-1 hashing function implemented entirely in Python.
     Arguments:
@@ -136,4 +154,17 @@ def sha1(data):
     Returns:
         A hex SHA-1 digest of the input message.
     """
-    return Sha1Hash().update(data).hexdigest()
+    return Sha1Hash(h, length).update(data).hexdigest()
+
+def extend_sha(sha, msg, suffix, validate):
+    """Extends sha to generated forges sha ending with given suffix."""
+    # Message is known but we don't know length of key.  We will try all values
+    # multiple of multiple of 64
+    msg_len = len(msg)
+    msg_len = msg_len + (64 - msg_len % 64)
+    h = struct.unpack('>5I', sha)
+    while(msg_len < 1024):
+        if validate(Sha1Hash(h, msg_len).update(suffix).digest()):
+            return True
+        msg_len += 64
+    return False
