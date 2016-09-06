@@ -269,7 +269,7 @@ class Crypto(object):
         return (oracle, key, init_vector)
 
     @staticmethod
-    def flip_cipher_to_add_admin(aes_cbc, has_admin):
+    def flip_cipher_to_add_admin_cbc(aes_cbc, has_admin):
         """Flip bits in text until we get admin in cipher."""
         # this ensures at least one block has all X's
         block_size = 16
@@ -285,6 +285,21 @@ class Crypto(object):
             if has_admin(flipped_cipher):
                 return True
         return False
+
+    @staticmethod
+    def flip_cipher_to_add_admin_ctr(aes_ctr, has_admin):
+        """Flip bits in cipher until we get admin in cipher."""
+        text = "xadminxtruex"
+        cipher = aes_ctr(text)
+        def xor(text, index, flip):
+            return text[:index] + chr(ord(text[index]) ^ flip) + text[index+1:]
+        # we skipped the part to figure out prefix size, should be very easy.
+        prefix_len = 32
+        flip = ord('x') ^ ord(';')
+        cipher = xor(cipher, prefix_len, flip)
+        cipher = xor(cipher, prefix_len + 6, ord('x') ^ ord('='))
+        cipher = xor(cipher, prefix_len + 11, flip)
+        return has_admin(cipher)
 
     @staticmethod
     def break_aes_using_padding_leak(cipher, init_vector, has_valid_padding):

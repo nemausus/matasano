@@ -4,6 +4,7 @@
 
 import base64
 import unittest
+import urllib
 from time import time
 
 from Crypto.Cipher import AES
@@ -50,6 +51,22 @@ class TestSet4(unittest.TestCase):
 
         self.assertEqual(known, text)
 
+    @logger
+    def test_ctr_bit_flipping(self):
+        """Challenge 26"""
+        prefix = "comment1=cooking%20MCs;userdata="
+        suffix = ";comment2=%20like%20a%20pound%20of%20bacon"
+        counter = Crypto.gen_aes_stream_counter_mt19973(3453243);
+        oracle, key = Crypto.generate_aes_oracle(
+            prefix, suffix, AES.MODE_CTR, urllib.quote, 16, counter=counter)
+
+        def has_admin(cipher):
+            """Checks if cipher has admin."""
+            counter = Crypto.gen_aes_stream_counter_mt19973(3453243);
+            text = Crypto.decrypt_aes(cipher, key, AES.MODE_CTR, counter=counter)
+            return text.find(';admin=true;') != -1
+
+        self.assertTrue(Crypto.flip_cipher_to_add_admin_ctr(oracle, has_admin))
 
 if __name__ == '__main__':
     unittest.main(verbosity=0)
