@@ -383,6 +383,16 @@ class Crypto(object):
         return key
 
     @staticmethod
+    def extract_key_if_key_is_same_as_key(cipher, oracle):
+        """Extract key given encrypt and decrypt functions.  Exploit the fact
+        that key is same is IV."""
+        bs = 16
+        blocks = Crypto.get_blocks(cipher)
+        cipher = blocks[2] + chr(0)*bs + blocks[2] + blocks[3]
+        text = oracle(cipher)
+        return FrequencyAnalyzer.get_repeating_xor(text[0:bs], text[2*bs:])
+
+    @staticmethod
     def gen_random_number():
         """Wait for 40 to 1000 seconds and then generate random number using
         mt19937 randome generator"""

@@ -68,5 +68,15 @@ class TestSet4(unittest.TestCase):
 
         self.assertTrue(Crypto.flip_cipher_to_add_admin_ctr(oracle, has_admin))
 
+    @logger
+    def test_break_if_iv_is_same_as_key(self):
+        """Challenge 27"""
+        key = Crypto.gen_random_key(16)
+        iv = key
+        oracle = lambda c: Crypto.decrypt_aes(c, key, AES.MODE_CBC, iv)
+        cipher = Crypto.encrypt_aes("X"*48, key, AES.MODE_CBC, iv)
+        self.assertEquals(key,
+                Crypto.extract_key_if_key_is_same_as_key(cipher, oracle))
+
 if __name__ == '__main__':
     unittest.main(verbosity=0)
