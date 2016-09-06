@@ -6,7 +6,7 @@ from time import time
 from Crypto.Cipher import AES
 from Crypto import Random
 from mt19937 import MT19937RNG
-from mt19937 import MT19937Cipther
+from mt19937 import MT19937Cipher
 from frequency_analyzer import FrequencyAnalyzer
 
 def logger(test):
@@ -342,6 +342,16 @@ class Crypto(object):
             while True:
                 yield chr(0)*8 + chr(count) + chr(0)*7
                 count += 1
+        counter = gen_counter()
+        return lambda: counter.next()
+
+    @staticmethod
+    def gen_aes_stream_counter_mt19973(seed):
+        def gen_counter():
+            """counter generator."""
+            rng = MT19937RNG(seed)
+            while True:
+                yield rng.next_str()
         counter = gen_counter()
         return lambda: counter.next()
 

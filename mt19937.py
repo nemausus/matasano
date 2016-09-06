@@ -1,6 +1,8 @@
 # author : Naresh Kumar
 """MT19937 random number generator utils."""
 
+import struct
+
 def _int32(num):
     # Get the 32 least significant bits.
     return int(0xFFFFFFFF & num)
@@ -38,6 +40,10 @@ class MT19937RNG(object):
         self.index = self.index + 1
 
         return _int32(num)
+
+    def next_str(self):
+        l = lambda: struct.pack(">I", self.next())
+        return l() + l() + l() + l()
 
 
     def twist(self):
@@ -78,7 +84,6 @@ class MT19937RNG(object):
             num = num ^ temp >> 11
             clone.seq[i] = num
         return clone
-
 
 class MT19937Cipher(object):
     """A simple stream cipher based on MT19937 random number generator."""
