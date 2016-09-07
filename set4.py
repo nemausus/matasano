@@ -3,11 +3,13 @@
 """Stream Crypto and Randomness."""
 
 import base64
+import hashlib
 import unittest
 import urllib
 from time import time
 
 from Crypto.Cipher import AES
+from Crypto.Hash import MD4
 from crypto import Crypto
 from crypto import logger
 from frequency_analyzer import FrequencyAnalyzer
@@ -17,6 +19,7 @@ from sha1 import add_padding
 from sha1 import extend_sha
 from sha1 import sha1
 from sha1 import Sha1Hash
+from md4 import MD4Hash
 
 class TestSet4(unittest.TestCase):
     """Tests for set 4 solutions."""
@@ -85,8 +88,10 @@ class TestSet4(unittest.TestCase):
     @logger
     def test_sha1(self):
         """Challenge 28"""
-        self.assertEquals("da728ec3a1c9fc32a758559f49bb9425e922d4bc",
-                sha1("naresh"))
+        text = "naresh"
+        m = hashlib.sha1()
+        m.update(text)
+        self.assertEquals(m.hexdigest(), sha1(text))
 
     @logger
     def test_sha_length_extension(self):
@@ -100,6 +105,14 @@ class TestSet4(unittest.TestCase):
         forged_sha = Sha1Hash().update(forged_message).digest()
         validate = lambda sha: sha == forged_sha
         self.assertTrue(extend_sha(orig_sha, orig_message, suffix, validate))
+
+    @logger
+    def test_md4(self):
+        """Challenge 30"""
+        text = "naresh"
+        m = MD4.new()
+        m.update(text)
+        self.assertEquals(m.digest(), MD4Hash().update(text).digest())
 
 if __name__ == '__main__':
     unittest.main(verbosity=0)
