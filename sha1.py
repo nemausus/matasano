@@ -131,20 +131,21 @@ class Sha1Hash(object):
             return h
         return _process_chunk(message[64:], *h)
 
-def add_padding(message):
-    message_byte_length = len(message)
-    # append the bit '1' to the message
-    message += b'\x80'
+    @staticmethod
+    def pad(message):
+        message_byte_length = len(message)
+        # append the bit '1' to the message
+        message += b'\x80'
 
-    # append 0 <= k < 512 bits '0', so that the resulting message length
-    # (in bytes) is congruent to 56 (mod 64)
-    message += b'\x00' * ((56 - (message_byte_length + 1) % 64) % 64)
+        # append 0 <= k < 512 bits '0', so that the resulting message length
+        # (in bytes) is congruent to 56 (mod 64)
+        message += b'\x00' * ((56 - (message_byte_length + 1) % 64) % 64)
 
-    # append length of message (before pre-processing), in bits, as 64-bit
-    # big-endian integer
-    message_bit_length = message_byte_length * 8
-    message += struct.pack(b'>Q', message_bit_length)
-    return message
+        # append length of message (before pre-processing), in bits, as 64-bit
+        # big-endian integer
+        message_bit_length = message_byte_length * 8
+        message += struct.pack(b'>Q', message_bit_length)
+        return message
 
 def sha1(data, h=None, length=0):
     """SHA-1 Hashing Function
@@ -157,7 +158,7 @@ def sha1(data, h=None, length=0):
     return Sha1Hash(h, length).update(data).hexdigest()
 
 def extend_sha(sha, msg, suffix, validate):
-    """Extends sha to generated forges sha ending with given suffix."""
+    """Extends sha to generated forged sha ending with given suffix."""
     # Message is known but we don't know length of key.  We will try all values
     # multiple of multiple of 64
     msg_len = len(msg)

@@ -15,11 +15,11 @@ from crypto import logger
 from frequency_analyzer import FrequencyAnalyzer
 from mt19937 import MT19937RNG
 from mt19937 import MT19937Cipher
-from sha1 import add_padding
 from sha1 import extend_sha
 from sha1 import sha1
 from sha1 import Sha1Hash
 from md4 import MD4Hash
+from md4 import extend_md4
 
 class TestSet4(unittest.TestCase):
     """Tests for set 4 solutions."""
@@ -96,12 +96,13 @@ class TestSet4(unittest.TestCase):
     @logger
     def test_sha_length_extension(self):
         """Challenge 29"""
-        orig_message = 'comment1=cooking%20MCs;userdata=foo;comment2=%20like%20a%20pound%20of%20bacon'
+        orig_message = 'comment1=cooking%20MCs;userdata=foo;comment2=%20like' \
+                '%20a%20pound%20of%20bacon'
         # this is not known to attacker.
         key = Crypto.gen_random_key(100)
         suffix = ';admin=true;'
         orig_sha = Sha1Hash().update(key + orig_message).digest()
-        forged_message = add_padding(key + orig_message) + suffix
+        forged_message =Sha1Hash.pad(key + orig_message) + suffix
         forged_sha = Sha1Hash().update(forged_message).digest()
         validate = lambda sha: sha == forged_sha
         self.assertTrue(extend_sha(orig_sha, orig_message, suffix, validate))
@@ -113,6 +114,20 @@ class TestSet4(unittest.TestCase):
         m = MD4.new()
         m.update(text)
         self.assertEquals(m.digest(), MD4Hash().update(text).digest())
+
+    @logger
+    def test_md4_length_extension(self):
+        """Challenge 30"""
+        orig_message = 'comment1=cooking%20MCs;userdata=foo;comment2=%20like' \
+                '%20a%20pound%20of%20bacon'
+        # this is not known to attacker.
+        key = Crypto.gen_random_key(43)
+        suffix = ';admin=true;'
+        orig_hash = MD4Hash().update(key + orig_message).digest()
+        forged_message = MD4Hash.pad(key + orig_message) + suffix
+        forged_hash = MD4Hash().update(forged_message).digest()
+        validate = lambda h: h == forged_hash
+        self.assertTrue(extend_md4(orig_hash, orig_message, suffix, validate))
 
 if __name__ == '__main__':
     unittest.main(verbosity=0)

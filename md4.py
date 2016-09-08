@@ -18,14 +18,17 @@ def H(x,y,z):
     return x ^ y ^ z
 
 class MD4Hash(object):
-    def __init__(self, data=""):
-        self.remainder = data
-        self.count = 0
-        self.h = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476]
+    def __init__(self, h=None, count=0):
+        self.remainder = ""
+        self.count = count
+        if h:
+            self.h = h
+        else:
+            self.h = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476]
 
     def _add_chunk(self, chunk):
         self.count += 1
-        X = list( struct.unpack("<16I", chunk) + (None,) * (80-16) )
+        X = list(struct.unpack("<16I", chunk) + (None,) * (80-16))
         h = [x for x in self.h]
         # Round 1
         s = (3,7,11,19)
@@ -57,7 +60,7 @@ class MD4Hash(object):
         else:
             self.remainder = ""
         for chunk in xrange(0, len(message)-r, 64):
-            self._add_chunk( message[chunk:chunk+64] )
+            self._add_chunk(message[chunk:chunk+64])
         return self
 
     def digest(self):
@@ -66,3 +69,33 @@ class MD4Hash(object):
         out = struct.pack("<4I", *self.h)
         self.__init__()
         return out
+
+    @staticmethod
+    def pad(message):
+        message_byte_length = len(message)
+        # append the bit '1' to the message
+        message += b'\x80'
+
+        # append 0 <= k < 512 bits '0', so that the resulting message length
+        # (in bytes) is congruent to 56 (mod 64)
+        message += b'\x00' * ((55 - message_byte_length) % 64)
+
+        # append length of message (before pre-processing), in bits, as 64-bit
+        # little-endian integer
+        message_bit_length = message_byte_length * 8
+        message += struct.pack(b'<Q', message_bit_length)
+        return message
+
+def extend_md4(md4, msg, suffix, validate):
+    """Extends md4 to generated forged md4 hash ending with given suffix."""
+    # Message is known but we don't know length of key.  We will try all values
+    # multiple of multiple of 64
+    msg_len = len(msg)
+    msg_len = msg_len + (64 - msg_len % 64)
+    h = list(struct.unpack('<4I', md4))
+    while(msg_len < 1024):
+        count = len(MD4Hash.pad('x'*msg_len)) / 64
+        if validate(MD4Hash(h, count).update(suffix).digest()):
+            return True
+        msg_len += 64
+    return False
