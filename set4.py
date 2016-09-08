@@ -13,13 +13,15 @@ from Crypto.Hash import MD4
 from crypto import Crypto
 from crypto import logger
 from frequency_analyzer import FrequencyAnalyzer
-from mt19937 import MT19937RNG
-from mt19937 import MT19937Cipher
-from sha1 import extend_sha
-from sha1 import sha1
-from sha1 import Sha1Hash
 from md4 import MD4Hash
 from md4 import extend_md4
+from md4 import md4
+from mt19937 import MT19937Cipher
+from mt19937 import MT19937RNG
+from sha1 import Sha1Hash
+from sha1 import extend_sha1
+from sha1 import hmac_sha1
+from sha1 import sha1
 
 class TestSet4(unittest.TestCase):
     """Tests for set 4 solutions."""
@@ -91,7 +93,7 @@ class TestSet4(unittest.TestCase):
         text = "naresh"
         m = hashlib.sha1()
         m.update(text)
-        self.assertEquals(m.hexdigest(), sha1(text))
+        self.assertEquals(m.digest(), sha1(text))
 
     @logger
     def test_sha_length_extension(self):
@@ -101,19 +103,18 @@ class TestSet4(unittest.TestCase):
         # this is not known to attacker.
         key = Crypto.gen_random_key(100)
         suffix = ';admin=true;'
-        orig_sha = Sha1Hash().update(key + orig_message).digest()
-        forged_message =Sha1Hash.pad(key + orig_message) + suffix
-        forged_sha = Sha1Hash().update(forged_message).digest()
+        orig_sha = sha1(key + orig_message)
+        forged_message = Sha1Hash.pad(key + orig_message) + suffix
+        forged_sha = sha1(forged_message)
         validate = lambda sha: sha == forged_sha
-        self.assertTrue(extend_sha(orig_sha, orig_message, suffix, validate))
+        self.assertTrue(extend_sha1(orig_sha, orig_message, suffix, validate))
 
     @logger
     def test_md4(self):
-        """Challenge 30"""
         text = "naresh"
         m = MD4.new()
         m.update(text)
-        self.assertEquals(m.digest(), MD4Hash().update(text).digest())
+        self.assertEquals(m.digest(), md4(text))
 
     @logger
     def test_md4_length_extension(self):
@@ -123,11 +124,19 @@ class TestSet4(unittest.TestCase):
         # this is not known to attacker.
         key = Crypto.gen_random_key(43)
         suffix = ';admin=true;'
-        orig_hash = MD4Hash().update(key + orig_message).digest()
+        orig_hash = md4(key + orig_message)
         forged_message = MD4Hash.pad(key + orig_message) + suffix
-        forged_hash = MD4Hash().update(forged_message).digest()
+        forged_hash = md4(forged_message)
         validate = lambda h: h == forged_hash
         self.assertTrue(extend_md4(orig_hash, orig_message, suffix, validate))
+
+    @logger
+    def test_hmac_sha1(self):
+        h = "fbdb1d1b18aa6c08324b7d64b71fb76370690e1d".decode("hex")
+        self.assertEquals(hmac_sha1("", ""), h)
+        h = "de7c9b85b8b78aa6bc8a7a36f70a90701c9db4d9".decode("hex")
+        self.assertEquals(hmac_sha1("key",
+            "The quick brown fox jumps over the lazy dog"), h)
 
 if __name__ == '__main__':
     unittest.main(verbosity=0)

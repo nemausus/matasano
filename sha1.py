@@ -6,6 +6,7 @@
 from __future__ import print_function
 import struct
 import io
+from frequency_analyzer import FrequencyAnalyzer
 
 def _left_rotate(n, b):
     """Left rotate a 32-bit integer n by b bits."""
@@ -147,17 +148,33 @@ class Sha1Hash(object):
         message += struct.pack(b'>Q', message_bit_length)
         return message
 
-def sha1(data, h=None, length=0):
+def sha1(data):
     """SHA-1 Hashing Function
     A custom SHA-1 hashing function implemented entirely in Python.
     Arguments:
         data: A bytes or BytesIO object containing the input message to hash.
     Returns:
-        A hex SHA-1 digest of the input message.
+        A SHA-1 digest of the input message.
     """
-    return Sha1Hash(h, length).update(data).hexdigest()
+    return Sha1Hash().update(data).digest()
 
-def extend_sha(sha, msg, suffix, validate):
+def hmac_sha1(key, message):
+    """HMAC implementation using sha1 as hash function"""
+    blocksize = 64
+    # keys longer than blocksize are shortened
+    if (len(key) > blocksize):
+        key = sha1(key)
+
+    # keys shorter than blocksize are zero-padded
+    if (len(key) < blocksize):
+        key = key + b'\x00' * (blocksize - len(key))
+
+    o_key_pad = FrequencyAnalyzer.get_repeating_xor('\x5c' * blocksize, key)
+    i_key_pad = FrequencyAnalyzer.get_repeating_xor('\x36' * blocksize, key)
+
+    return sha1(o_key_pad + sha1(i_key_pad + message))
+
+def extend_sha1(sha, msg, suffix, validate):
     """Extends sha to generated forged sha ending with given suffix."""
     # Message is known but we don't know length of key.  We will try all values
     # multiple of multiple of 64

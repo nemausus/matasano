@@ -86,6 +86,11 @@ class MD4Hash(object):
         message += struct.pack(b'<Q', message_bit_length)
         return message
 
+def md4(message):
+    """MD4 Hashing Function"""
+    return MD4Hash().update(message).digest()
+
+
 def extend_md4(md4, msg, suffix, validate):
     """Extends md4 to generated forged md4 hash ending with given suffix."""
     # Message is known but we don't know length of key.  We will try all values
